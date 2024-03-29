@@ -5,6 +5,13 @@
 #include <string.h>
 #include <stdio.h>
 
+String string_init(const char* cstr)
+{
+    assert(cstr != NULL);
+    const size_t length = strlen(cstr);
+    return (String){(uint8_t*)cstr, length};
+}
+
 String string_create(const size_t length)
 {
     assert(length > 0);

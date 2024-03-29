@@ -14,7 +14,7 @@ typedef struct list_node_base {
 } ListNodeBase;
 
 extern List list_init(void);
-#define List(...) list_init(__VA_ARGS__)
+#define List() (List){NULL, NULL}
 
 extern void list_deinit(List* const list);
 

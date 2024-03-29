@@ -10,8 +10,9 @@ typedef struct string {
     size_t length;
 } String;
 
-#define string_init(cstr) (String){(uint8_t*)(cstr), sizeof(cstr) - 1}
-#define String(...) string_init(__VA_ARGS__)
+extern String string_init(const char* cstr);
+
+#define String(cstr) (String){(uint8_t*)(cstr), sizeof(cstr) - 1}
 
 extern String string_create(const size_t length);
 extern void string_destroy(String* const string);
