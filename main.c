@@ -1,12 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "common.h"
 #include "string.h"
 #include "list.h"
 #include "lexer.h"
-
-#define LOG(message) fputs((message), stderr)
-#define LOGF(format, ...) fprintf(stderr, (format), __VA_ARGS__)
+#include "parser.h"
 
 int main(int argc, char* argv[])
 {
@@ -17,14 +16,10 @@ int main(int argc, char* argv[])
 
     String input = string_init(argv[1]);
     List tokens = lexical_scan(&input);
+    Tree tree = parse_expression(&tokens);
 
-    for list_range(it, tokens) {
-        Token* token = list_node_data(it, Token);
-        string_debug_print(&token_type_string[token->type]);
-        LOG(": \'");
-        string_debug_print(&token->content);
-        LOG("\'\n");
-    }
+    print_tokens(&tokens);
+    print_expression(&tree); 
 
     list_deinit(&tokens);
 }
