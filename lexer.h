@@ -25,4 +25,6 @@ extern const String token_type_string[];
 
 extern List lexical_scan(const String* const string);
 
+extern void print_tokens(const List* const tokens);
+
 #endif // __LEXER_H__

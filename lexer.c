@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "common.h"
+
 typedef struct lexer {
     const String* const input;
     size_t start;
@@ -248,4 +250,15 @@ List lexical_scan(const String* const string)
     }
 
     return lexer.tokens;
+}
+
+void print_tokens(const List* const tokens)
+{
+    for list_range(it, *tokens) {
+        Token* token = list_node_data(it, Token);
+        string_debug_print(&token_type_string[token->type]);
+        LOG(": \'");
+        string_debug_print(&token->content);
+        LOG("\'\n");
+    }
 }
