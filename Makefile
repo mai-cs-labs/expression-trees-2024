@@ -6,7 +6,7 @@ LDFLAGS := -fsanitize=address,leak,undefined
 
 all: simplify
 
-simplify: main.o
+simplify: string.o main.o
 	$(LD) -o $@ $(LDFLAGS) $^
 
 .c.o:

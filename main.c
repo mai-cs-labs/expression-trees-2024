@@ -1,6 +1,9 @@
 #include <stdio.h>
 
+#include "string.h"
+
 int main(void)
 {
-    fputs("Hello, world!\n", stdout);
+    String message = String("Hello, world!\n");
+    string_print(&message);
 }
