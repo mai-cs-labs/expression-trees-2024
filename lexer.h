@@ -6,9 +6,13 @@
 
 typedef enum token_type {
     TokenType_eof,
-    TokenType_number,
-    TokenType_symbol,
-    TokenType_operator,
+    TokenType_number,   // [+-]?[0-9]+(\.?[0-9]*)?([eE][0-9]*)?
+    TokenType_symbol,   // [a-zA-Z]
+    TokenType_add,      // +
+    TokenType_subtract, // -
+    TokenType_multiply, // *
+    TokenType_divide,   // /
+    TokenType_power,    // ^
     TokenType__count,
 } TokenType;
 

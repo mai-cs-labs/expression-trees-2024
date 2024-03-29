@@ -20,7 +20,11 @@ const String token_type_string[] = {
     [TokenType_eof] = String("EOF"),
     [TokenType_number] = String("Number"),
     [TokenType_symbol] = String("Symbol"),
-    [TokenType_operator] = String("Op"),
+    [TokenType_add] = String("Add"),
+    [TokenType_subtract] = String("Subtract"),
+    [TokenType_multiply] = String("Multiply"),
+    [TokenType_divide] = String("Divide"),
+    [TokenType_power] = String("Power"),
 };
 
 static uint8_t lexer_next(Lexer* const lexer)
@@ -128,8 +132,33 @@ static LexerState lexer_scan_text(Lexer* const lexer)
         lexer_backup(lexer);
         return (LexerState)lexer_scan_symbol;
     }
-    else if (is_operator(c))
-        lexer_emit(lexer, TokenType_operator);
+    else if (is_operator(c)) {
+        TokenType type;
+
+        switch (c) {
+        case '+':
+            type = TokenType_add;
+            break;
+
+        case '-':
+            type = TokenType_subtract;
+            break;
+
+        case '*':
+            type = TokenType_multiply;
+            break;
+
+        case '/':
+            type = TokenType_divide;
+            break;
+
+        case '^':
+            type = TokenType_power;
+            break;
+        }
+
+        lexer_emit(lexer, type);
+    }
     else if (c == (uint8_t)EOF)
         return NULL;
 
@@ -150,7 +179,21 @@ static LexerState lexer_scan_number(Lexer* const lexer)
         lexer_accept_run(lexer, &digits); 
     }
     else {
-        lexer_emit(lexer, TokenType_operator);
+        lexer_backup(lexer);
+        uint8_t next = lexer_next(lexer);
+        TokenType type;
+
+        switch (next) {
+        case '+':
+            type = TokenType_add;
+            break;
+
+        case '-':
+            type = TokenType_subtract;
+            break;
+        }
+
+        lexer_emit(lexer, type);
         return (LexerState)lexer_scan_text; 
     }
 
