@@ -18,8 +18,6 @@ extern List list_init(void);
 
 extern void list_deinit(List* const list);
 
-extern void list_clear(List* const list);
-
 extern void* list__insert_front(List* const list, const size_t size);
 #define list_insert_front(list_p, type) \
     ((type*)list__insert_front((list_p), sizeof(type)))

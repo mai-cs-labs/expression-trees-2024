@@ -11,12 +11,6 @@ List list_init(void)
 void list_deinit(List* const list)
 {
     assert(list != NULL);
-    list_clear(list);
-}
-
-void list_clear(List* const list)
-{
-    assert(list != NULL);
 
     ListNodeBase* curr = list->head;
     ListNodeBase* prev = NULL;
