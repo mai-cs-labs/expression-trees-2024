@@ -111,13 +111,6 @@ static bool is_letter(const uint8_t c)
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
 }
 
-#if 0
-static bool is_separator(const uint8_t c)
-{
-    return c == ' ' || c == '\t';
-}
-#endif
-
 static LexerState lexer_scan_number(Lexer* const lexer);
 static LexerState lexer_scan_symbol(Lexer* const lexer);
 
@@ -168,10 +161,10 @@ static LexerState lexer_scan_number(Lexer* const lexer)
         lexer_accept_run(lexer, &digits);
 
     uint8_t next = lexer_peek(lexer);
-    if (is_letter(next) || is_operator(next)) {
+    if (is_letter(next)) {
         lexer_next(lexer);
         lexer_ignore(lexer);
-        return (LexerState)lexer_scan_text; 
+        return (LexerState)lexer_scan_text;
     }
 
     lexer_emit(lexer, TokenType_number);
@@ -185,10 +178,10 @@ static LexerState lexer_scan_symbol(Lexer* const lexer)
 
     uint8_t c = lexer_next(lexer);
 
-    while (is_letter(c)) {
+    while (is_letter(c))
         c = lexer_next(lexer);
-    }
-
+    
+    lexer_backup(lexer);
     lexer_emit(lexer, TokenType_symbol);
 
     return (LexerState)lexer_scan_text;
