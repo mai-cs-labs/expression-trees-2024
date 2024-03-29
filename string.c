@@ -20,5 +20,5 @@ bool string_empty(const String* const string)
 void string_print(const String* const string)
 {
     assert(string != NULL);
-    fwrite(string->text, string->length, 0, stdout);
+    fwrite(string->text, string->length, 1, stdout);
 }

@@ -6,8 +6,8 @@
 #include <stdbool.h>
 
 typedef struct string {
-    uint8_t* const text;
-    const size_t length;
+    uint8_t* text;
+    size_t length;
 } String;
 
 extern String string_init(const char* cstr);
