@@ -16,6 +16,13 @@ typedef struct lexer {
 typedef void* (*LexerState)(Lexer* const lexer);
 typedef LexerState (*LexerStateFn)(Lexer* const lexer);
 
+const String token_type_string[] = {
+    [TokenType_eof] = String("EOF"),
+    [TokenType_number] = String("Number"),
+    [TokenType_symbol] = String("Symbol"),
+    [TokenType_operator] = String("Op"),
+};
+
 static uint8_t lexer_next(Lexer* const lexer)
 {
     assert(lexer != NULL);
@@ -112,7 +119,7 @@ static bool is_separator(const uint8_t c)
 #endif
 
 static LexerState lexer_scan_number(Lexer* const lexer);
-static LexerState lexer_scan_operator(Lexer* const lexer);
+static LexerState lexer_scan_symbol(Lexer* const lexer);
 
 static LexerState lexer_scan_text(Lexer* const lexer)
 {
@@ -124,8 +131,12 @@ static LexerState lexer_scan_text(Lexer* const lexer)
         lexer_backup(lexer);
         return (LexerState)lexer_scan_number;
     }
+    else if (is_letter(c)) {
+        lexer_backup(lexer);
+        return (LexerState)lexer_scan_symbol;
+    }
     else if (is_operator(c))
-        return (LexerState)lexer_scan_operator;
+        lexer_emit(lexer, TokenType_operator);
     else if (c == (uint8_t)EOF)
         return NULL;
 
@@ -141,7 +152,14 @@ static LexerState lexer_scan_number(Lexer* const lexer)
     lexer_accept(lexer, &String("+-"));
 
     const String digits = String("0123456789");
-    lexer_accept_run(lexer, &digits); 
+    if (lexer_accept(lexer, &digits)) {
+        lexer_backup(lexer); 
+        lexer_accept_run(lexer, &digits); 
+    }
+    else {
+        lexer_emit(lexer, TokenType_operator);
+        return (LexerState)lexer_scan_text; 
+    }
 
     if (lexer_accept(lexer, &String(".")))
         lexer_accept_run(lexer, &digits);
@@ -161,11 +179,19 @@ static LexerState lexer_scan_number(Lexer* const lexer)
     return (LexerState)lexer_scan_text; 
 }
 
-static LexerState lexer_scan_operator(Lexer* const lexer)
+static LexerState lexer_scan_symbol(Lexer* const lexer)
 {
     assert(lexer != NULL);
 
-    return (LexerState)lexer_scan_text; 
+    uint8_t c = lexer_next(lexer);
+
+    while (is_letter(c)) {
+        c = lexer_next(lexer);
+    }
+
+    lexer_emit(lexer, TokenType_symbol);
+
+    return (LexerState)lexer_scan_text;
 }
 
 List lexical_scan(const String* const string)

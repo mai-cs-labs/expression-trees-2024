@@ -11,7 +11,7 @@
 int main(int argc, char* argv[])
 {
     if (argc < 2) {
-        LOGF("Usage: %s [-v] -e 'expression'\n", argv[0]);
+        LOGF("Usage: %s expression\n", argv[0]);
         exit(EXIT_SUCCESS);
     }
 
@@ -20,8 +20,10 @@ int main(int argc, char* argv[])
 
     for list_range(it, tokens) {
         Token* token = list_node_data(it, Token);
-        string_print(&token->content);
-        putchar('\n');
+        string_debug_print(&token_type_string[token->type]);
+        LOG(": \'");
+        string_debug_print(&token->content);
+        LOG("\'\n");
     }
 
     list_deinit(&tokens);

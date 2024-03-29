@@ -72,8 +72,8 @@ size_t string_index(const String* const string, const uint8_t c)
     return index;
 }
 
-void string_print(const String* const string)
+void string_write(const String* const string, FILE* const file)
 {
     assert(string != NULL);
-    fwrite(string->text, string->length, 1, stdout);
+    fwrite(string->text, string->length, 1, file);
 }
