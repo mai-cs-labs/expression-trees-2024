@@ -103,7 +103,7 @@ static bool is_digit(const uint8_t c)
 
 static bool is_operator(const uint8_t c)
 {
-    return c == '+' || c == '-' || c == '*' || c == '/';
+    return c == '+' || c == '-' || c == '*' || c == '/' || c == '^';
 }
 
 static bool is_letter(const uint8_t c)
