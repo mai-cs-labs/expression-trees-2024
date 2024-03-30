@@ -19,6 +19,8 @@ static const size_t operator_precedence[] = {
     [TokenType_multiply] = 2,
     [TokenType_divide] = 2,
     [TokenType_power] = 3,
+    [TokenType_left_paren] = 0,
+    [TokenType_right_paren] = 0,
 };
 
 static void parser_parse(Parser* const parser);
@@ -27,8 +29,10 @@ static Expr* parser_parse_expression(Parser* const parser, const size_t preceden
 static Expr* parser_parse_binary(Parser* const parser,
                                  Expr* const lhs,
                                  const size_t precedence);
+
 static Token* parser_next(Parser* const parser);
 static void parser_backup(Parser* const parser);
+// static Token* parser_peek(Parser* const parser);
 
 static void print_expression_inorder(Expr* const expr, const bool verbose);
 static bool preprocess_tokens(List* const tokens);
@@ -86,11 +90,25 @@ static Expr* parser_parse_expression(Parser* const parser, const size_t preceden
 {
     assert(parser != NULL);
 
-    Expr* lhs = parser_parse_leaf(parser);
-    if (lhs == NULL)
-        return NULL;
+    Expr* lhs;
 
-    if (token_type_is_operator(lhs->data.type)) {
+    Token* next = parser_next(parser);
+    if (next->type == TokenType_left_paren) {
+        lhs = parser_parse_expression(parser, 0); 
+
+        parser_backup(parser); 
+        next = parser_next(parser); 
+
+        if (next->type != TokenType_right_paren) {
+            fputs("Expression was not closed, \')\' expected\n", stderr);
+            return lhs;
+        }
+    } else {
+        parser_backup(parser);
+        lhs = parser_parse_leaf(parser);
+    }
+
+    if (lhs == NULL) {
         // TODO: Log error: leaf expected before operator
         return NULL;
     }
@@ -122,7 +140,7 @@ static Expr* parser_parse_binary(Parser* const parser,
 
     Token* operator = parser_next(parser);
 
-    if (operator != NULL && token_type_is_operator(operator->type)) {
+    if (operator != NULL && token_type_is_binary_operator(operator->type)) {
         const size_t lhs_precedence = operator_precedence[operator->type];
         const size_t bias = token_type_is_right_associative(operator->type);
 
@@ -171,6 +189,8 @@ static void parser_backup(Parser* const parser)
 
     if (parser->input.head != NULL)
         parser->input.head = parser->input.head->prev;
+    else if (parser->input.tail)
+        parser->input.head = parser->input.tail;
 }
 
 #if 0

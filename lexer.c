@@ -58,6 +58,12 @@ bool token_type_is_operator(const TokenType type)
     return TokenType__operators_begin < type && type < TokenType__operators_end;
 }
 
+extern bool token_type_is_binary_operator(const TokenType type)
+{
+    assert(0 <= type && type < TokenType__count);
+    return TokenType_add <= type && type <= TokenType_power;
+}
+
 bool token_type_is_right_associative(const TokenType type)
 {
     assert(0 <= type && type < TokenType__count);
