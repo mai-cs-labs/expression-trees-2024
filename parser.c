@@ -36,6 +36,9 @@ static void parser_backup(Parser* const parser);
 
 static void print_expression_inorder(Expr* const expr, const bool verbose);
 
+static bool is_expression_unary(const Expr* const expr);
+static bool is_expression_leaf(const Expr* const expr);
+
 Tree parse_expression(List* const tokens)
 {
     assert(tokens != NULL);
@@ -103,7 +106,27 @@ static Expr* parser_parse_expression(Parser* const parser, const size_t preceden
             fputs("Expression was not closed, \')\' expected\n", stderr);
             return lhs;
         }
-    } else {
+    }
+    else if (token_type_is_unary_operator(next->type)) {
+        Token* ahead = parser_next(parser);
+        if (ahead == NULL) {
+            // TODO: Log error
+            return NULL;
+        }
+
+        Expr* unary = tree_node_create(Expr);
+        unary->data = *next;
+
+        if (token_type_is_literal(ahead->type)) {
+            parser_backup(parser);
+            unary->base.left = (TreeNode*)parser_parse_leaf(parser);
+        }
+        else if (ahead->type == TokenType_left_paren)
+            unary->base.left = (TreeNode*)parser_parse_expression(parser, 0);
+
+        lhs = unary;
+    }
+    else {
         parser_backup(parser);
         lhs = parser_parse_leaf(parser);
     }
@@ -210,23 +233,41 @@ static void print_expression_inorder(Expr* const expr, const bool verbose)
     if (expr == NULL)
         return;
 
-    const bool single = expr->base.left == NULL && expr->base.right == NULL;
+    if (is_expression_unary(expr)) {
+        string_print(&expr->data.content);
+        print_expression_inorder((Expr*)expr->base.left, verbose);
+    }
+    else {
+        const bool non_leaf = !is_expression_leaf(expr);
 
-    if (!single && verbose)
-        putc('(', stdout);
+        if (non_leaf && verbose)
+            putc('(', stdout);
+        
+        print_expression_inorder((Expr*)expr->base.left, verbose);
 
-    print_expression_inorder((Expr*)expr->base.left, verbose);
+        if (expr->base.left != NULL)
+            putc(' ', stdout);
 
-    if (expr->base.left != NULL)
-        putchar(' ');
+        string_print(&expr->data.content);
 
-    string_print(&expr->data.content);
+        if (expr->base.right != NULL)
+            putc(' ', stdout);
 
-    if (expr->base.right != NULL)
-        putchar(' ');
+        print_expression_inorder((Expr*)expr->base.right, verbose);
 
-    print_expression_inorder((Expr*)expr->base.right, verbose);
+        if (non_leaf && verbose)
+            putc(')', stdout);
+    }
+}
 
-    if (!single && verbose)
-        putc(')', stdout);
+static bool is_expression_unary(const Expr* const expr)
+{
+    assert(expr != NULL);
+    return expr->base.left != NULL && expr->base.right == NULL;
+}
+
+static bool is_expression_leaf(const Expr* const expr)
+{
+    assert(expr != NULL);
+    return expr->base.left == NULL && expr->base.right == NULL;
 }

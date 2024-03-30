@@ -28,8 +28,6 @@ static bool lexer_accept(Lexer* const lexer, const String* const valid);
 static void lexer_accept_run(Lexer* const lexer, const String* const valid);
 static void lexer_emit(Lexer* const lexer, const TokenType type);
 
-static bool postprocess_tokens(List* const tokens);
-
 static bool is_digit(const uint8_t c);
 static bool is_operator(const uint8_t c);
 static bool is_letter(const uint8_t c);
@@ -71,6 +69,12 @@ bool token_type_is_binary_operator(const TokenType type)
 {
     assert(0 <= type && type < TokenType__count);
     return TokenType_add <= type && type <= TokenType_power;
+}
+
+bool token_type_is_unary_operator(const TokenType type)
+{
+    assert(0 <= type && type < TokenType__count);
+    return type == TokenType_add || type == TokenType_subtract;
 }
 
 bool token_type_is_right_associative(const TokenType type)
