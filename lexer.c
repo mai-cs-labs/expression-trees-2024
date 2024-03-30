@@ -72,13 +72,20 @@ bool token_type_is_operator(const TokenType type)
 
 void print_tokens(const List* const tokens)
 {
+    putc('[', stderr);
     for list_range(it, *tokens) {
         Token* token = list_node_data(it, Token);
+
+        putc('{', stderr);
         string_debug_print(&token_type_string[token->type]);
         LOG(": \'");
         string_debug_print(&token->content);
-        LOG("\'\n");
+        fputs("\'}", stderr);
+
+        if (it->next != NULL)
+            fputs(", ", stderr);
     }
+    fputs("]\n", stderr);
 }
 
 static LexerState lexer_scan_text(Lexer* const lexer)
