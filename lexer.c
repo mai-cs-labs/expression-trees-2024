@@ -68,6 +68,11 @@ bool token_type_is_operator(const TokenType type)
     return TokenType_add <= type && type <= TokenType_power;
 }
 
+bool token_type_is_right_associative(const TokenType type)
+{
+    return type == TokenType_power;
+}
+
 void print_tokens(const List* const tokens)
 {
     putc('[', stderr);

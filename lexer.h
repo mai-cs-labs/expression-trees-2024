@@ -24,6 +24,7 @@ typedef struct token {
 extern List lexical_scan(const String* const string);
 
 extern bool token_type_is_operator(const TokenType type);
+extern bool token_type_is_right_associative(const TokenType type);
 
 extern void print_tokens(const List* const tokens);
 

@@ -124,8 +124,9 @@ static Expr* parser_parse_binary(Parser* const parser,
 
     if (operator != NULL && token_type_is_operator(operator->type)) {
         const size_t lhs_precedence = operator_precedence[operator->type];
+        const size_t bias = token_type_is_right_associative(operator->type);
 
-        if (lhs_precedence > precedence) {
+        if (lhs_precedence + bias > precedence) {
             Expr* rhs = parser_parse_expression(parser, lhs_precedence);
             if (rhs == NULL) {
                 // TODO: Log error
