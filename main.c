@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "common.h"
 #include "string.h"
 #include "list.h"
 #include "tree.h"
@@ -13,17 +12,17 @@ static bool verbose = false;
 
 static void print_short_usage(void)
 {
-    LOG("Usage: simplify [-h|--help] [-v] {expression}\n");
+    fputs("Usage: simplify [-h|--help] [-v] {expression}\n", stderr);
     exit(EXIT_SUCCESS);
 }
 
 static void print_long_usage(void)
 {
-    LOG("Usage: simplify [-h|--help] [-v] {expression}\n\n"
+    fputs("Usage: simplify [-h|--help] [-v] {expression}\n\n"
         "\t-h, --help\n"
         "\t\tOutput a usage message and exit\n\n"
         "\t-v\n"
-        "\t\tEnable output of debug messages\n");
+        "\t\tEnable output of debug messages\n", stderr);
     exit(EXIT_SUCCESS);
 }
 
@@ -55,7 +54,7 @@ int main(int argc, char* argv[])
     if (verbose)
         print_tokens(&tokens);
 
-    print_expression(&tree);
+    print_expression(&tree, verbose);
 
     tree_deinit(&tree); 
     list_deinit(&tokens);

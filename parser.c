@@ -6,10 +6,6 @@
 #include "lexer.h"
 #include "tree.h"
 
-enum {
-    OPERATOR_
-};
-
 typedef struct parser {
     List input;
     Tree expr;
@@ -34,7 +30,7 @@ static Expr* parser_parse_binary(Parser* const parser,
 static Token* parser_next(Parser* const parser);
 static void parser_backup(Parser* const parser);
 
-static void print_expression_inorder(Expr* const expr);
+static void print_expression_inorder(Expr* const expr, const bool verbose);
 static bool preprocess_tokens(List* const tokens);
 
 Tree parse_expression(List* const tokens)
@@ -53,10 +49,10 @@ Tree parse_expression(List* const tokens)
     return parser.expr;
 }
 
-void print_expression(const Tree* const tree)
+void print_expression(const Tree* const tree, const bool verbose)
 {
     assert(tree != NULL);
-    print_expression_inorder((Expr*)tree->root);
+    print_expression_inorder((Expr*)tree->root, verbose);
     putchar('\n');
 }
 
@@ -188,15 +184,17 @@ static Token* parser_peek(Parser* const parser)
 }
 #endif
 
-static void print_expression_inorder(Expr* const expr)
+static void print_expression_inorder(Expr* const expr, const bool verbose)
 {
     if (expr == NULL)
         return;
 
-    if (expr->base.left != NULL && expr->base.right != NULL)
-        putchar('(');
+    const bool single = expr->base.left == NULL && expr->base.right == NULL;
 
-    print_expression_inorder((Expr*)expr->base.left);
+    if (!single && verbose)
+        putc('(', stdout);
+
+    print_expression_inorder((Expr*)expr->base.left, verbose);
 
     if (expr->base.left != NULL)
         putchar(' ');
@@ -206,10 +204,10 @@ static void print_expression_inorder(Expr* const expr)
     if (expr->base.right != NULL)
         putchar(' ');
 
-    print_expression_inorder((Expr*)expr->base.right);
+    print_expression_inorder((Expr*)expr->base.right, verbose);
 
-    if (expr->base.left != NULL && expr->base.right != NULL)
-        putchar(')');
+    if (!single && verbose)
+        putc(')', stdout);
 }
 
 // When two numbers are together and the second number contains an operator

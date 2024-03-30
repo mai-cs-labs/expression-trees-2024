@@ -5,8 +5,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "common.h"
-
 typedef struct lexer {
     const String* const input;
     size_t start;
@@ -78,7 +76,7 @@ void print_tokens(const List* const tokens)
 
         putc('{', stderr);
         string_debug_print(&token_type_string[token->type]);
-        LOG(": \'");
+        fputs(": \'", stderr);
         string_debug_print(&token->content);
         fputs("\'}", stderr);
 
