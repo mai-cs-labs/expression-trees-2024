@@ -33,6 +33,7 @@ static bool postprocess_tokens(List* const tokens);
 static bool is_digit(const uint8_t c);
 static bool is_operator(const uint8_t c);
 static bool is_letter(const uint8_t c);
+static bool is_blank(const uint8_t c);
 
 List lexical_scan(const String* const string)
 {
@@ -50,8 +51,6 @@ List lexical_scan(const String* const string)
     while (state != NULL) {
         state = (LexerStateFn)state(&lexer);
     }
-
-    postprocess_tokens(&lexer.tokens);
 
     return lexer.tokens;
 }
@@ -113,7 +112,7 @@ static LexerState lexer_scan_text(Lexer* const lexer)
 
     const uint8_t c = lexer_next(lexer);
 
-    if (c == '+' || c == '-' || is_digit(c)) {
+    if (is_digit(c)) {
         lexer_backup(lexer);
         return (LexerState)lexer_scan_number;
     }
@@ -125,6 +124,14 @@ static LexerState lexer_scan_text(Lexer* const lexer)
         TokenType type;
 
         switch (c) {
+        case '+':
+            type = TokenType_add;
+            break;
+
+        case '-':
+            type = TokenType_subtract;
+            break;
+
         case '*':
             type = TokenType_multiply;
             break;
@@ -148,32 +155,20 @@ static LexerState lexer_scan_text(Lexer* const lexer)
 
         lexer_emit(lexer, type);
     }
-
+    else if (is_blank(c)) {
+        lexer_ignore(lexer);
+    }
     else if (c == (uint8_t)EOF)
         return NULL;
-
-    lexer_ignore(lexer);
+    else
+        lexer_emit(lexer, TokenType_illegal);
 
     return (LexerState)lexer_scan_text;
 }
 
-// +
-//  ^
-
 static LexerState lexer_scan_number(Lexer* const lexer)
 {
     assert(lexer != NULL);
-
-    lexer_accept(lexer, &String("+-"));
-
-    if (!is_digit(lexer_peek(lexer))) {
-        lexer_backup(lexer); 
-
-        uint8_t operator = lexer_next(lexer);
-        lexer_emit(lexer, operator == '+' ? TokenType_add : TokenType_subtract);
-
-        return (LexerState)lexer_scan_text;
-    }
 
     const String digits = String("0123456789");
     lexer_accept_run(lexer, &digits); 
@@ -280,45 +275,9 @@ static void lexer_emit(Lexer* const lexer, const TokenType type)
     assert(0 <= type && type < TokenType__count);
 
     String content = string_trim(lexer->input, lexer->start, lexer->position);
-    *list_insert_back(&lexer->tokens, Token) = (Token){type, content};
+    *list_insert_back(&lexer->tokens, Token) = (Token){type, lexer->start, content};
 
     lexer->start = lexer->position;
-}
-
-// When two numbers are together and the second number contains an operator
-// at the beginning of it, then input was {"X", "+Y"} or {"X", "-Y"}, thus
-// an operator token must be synthesised from it and operator symbol cut afterwards
-static bool postprocess_tokens(List* const tokens)
-{
-    assert(tokens != NULL);
-
-    for list_range(it, *tokens) {
-        Token* token = list_node_data(it, Token);
-        ListNodeBase* next_it = it->next;
-
-        if (next_it == NULL)
-            break;
-
-        Token* next = list_node_data(next_it, Token);
-
-        if (token->type == TokenType_number &&
-            next->type == TokenType_number) {
-            const uint8_t op = next->content.text[0];
-
-            if (op == '+' || op == '-') {
-                *list_insert_after(tokens, it, Token) = (Token){
-                    .type = op == '+' ? TokenType_add : TokenType_subtract,
-                    .content = string_trim(&next->content, 0, 1),
-                };
-                next->content = string_trim(&next->content, 1, next->content.length);
-            } else {
-                // TODO: No operator error
-                return false;
-            }
-        }
-    }
-
-    return true;
 }
 
 static bool is_digit(const uint8_t c)
@@ -335,5 +294,10 @@ static bool is_operator(const uint8_t c)
 static bool is_letter(const uint8_t c)
 {
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
+}
+
+static bool is_blank(const uint8_t c)
+{
+    return c == ' ' || c == '\t' || c == '\n' || c == '\r';
 }
 

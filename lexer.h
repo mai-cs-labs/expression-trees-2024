@@ -27,6 +27,7 @@ typedef enum token_type {
 
 typedef struct token {
     TokenType type;
+    size_t position;
     String content;
 } Token;
 
