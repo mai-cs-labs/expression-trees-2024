@@ -52,13 +52,19 @@ List lexical_scan(const String* const string)
     return lexer.tokens;
 }
 
+bool token_type_is_literal(const TokenType type)
+{
+    assert(0 <= type && type < TokenType__count);
+    return TokenType__literals_begin < type && type < TokenType__literals_end;
+}
+
 bool token_type_is_operator(const TokenType type)
 {
     assert(0 <= type && type < TokenType__count);
     return TokenType__operators_begin < type && type < TokenType__operators_end;
 }
 
-extern bool token_type_is_binary_operator(const TokenType type)
+bool token_type_is_binary_operator(const TokenType type)
 {
     assert(0 <= type && type < TokenType__count);
     return TokenType_add <= type && type <= TokenType_power;
@@ -115,14 +121,6 @@ static LexerState lexer_scan_text(Lexer* const lexer)
         TokenType type;
 
         switch (c) {
-        case '+':
-            type = TokenType_add;
-            break;
-
-        case '-':
-            type = TokenType_subtract;
-            break;
-
         case '*':
             type = TokenType_multiply;
             break;
@@ -155,35 +153,26 @@ static LexerState lexer_scan_text(Lexer* const lexer)
     return (LexerState)lexer_scan_text;
 }
 
+// +
+//  ^
+
 static LexerState lexer_scan_number(Lexer* const lexer)
 {
     assert(lexer != NULL);
 
     lexer_accept(lexer, &String("+-"));
 
-    const String digits = String("0123456789");
-    if (lexer_accept(lexer, &digits)) {
+    if (!is_digit(lexer_peek(lexer))) {
         lexer_backup(lexer); 
-        lexer_accept_run(lexer, &digits); 
+
+        uint8_t operator = lexer_next(lexer);
+        lexer_emit(lexer, operator == '+' ? TokenType_add : TokenType_subtract);
+
+        return (LexerState)lexer_scan_text;
     }
-    else {
-        lexer_backup(lexer);
-        uint8_t next = lexer_next(lexer);
-        TokenType type;
 
-        switch (next) {
-        case '+':
-            type = TokenType_add;
-            break;
-
-        case '-':
-            type = TokenType_subtract;
-            break;
-        }
-
-        lexer_emit(lexer, type);
-        return (LexerState)lexer_scan_text; 
-    }
+    const String digits = String("0123456789");
+    lexer_accept_run(lexer, &digits); 
 
     if (lexer_accept(lexer, &String(".")))
         lexer_accept_run(lexer, &digits);
