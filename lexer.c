@@ -28,7 +28,7 @@ static bool lexer_accept(Lexer* const lexer, const String* const valid);
 static void lexer_accept_run(Lexer* const lexer, const String* const valid);
 static void lexer_emit(Lexer* const lexer, const TokenType type);
 
-static bool preprocess_tokens(List* const tokens);
+static bool postprocess_tokens(List* const tokens);
 
 static bool is_digit(const uint8_t c);
 static bool is_operator(const uint8_t c);
@@ -51,7 +51,7 @@ List lexical_scan(const String* const string)
         state = (LexerStateFn)state(&lexer);
     }
 
-    preprocess_tokens(&lexer.tokens);
+    postprocess_tokens(&lexer.tokens);
 
     return lexer.tokens;
 }
@@ -288,7 +288,7 @@ static void lexer_emit(Lexer* const lexer, const TokenType type)
 // When two numbers are together and the second number contains an operator
 // at the beginning of it, then input was {"X", "+Y"} or {"X", "-Y"}, thus
 // an operator token must be synthesised from it and operator symbol cut afterwards
-static bool preprocess_tokens(List* const tokens)
+static bool postprocess_tokens(List* const tokens)
 {
     assert(tokens != NULL);
 
