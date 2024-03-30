@@ -90,6 +90,9 @@ static Expr* parser_parse_expression(Parser* const parser, const size_t preceden
     Expr* lhs;
 
     Token* next = parser_next(parser);
+    if (next == NULL)
+        return NULL;
+    
     if (next->type == TokenType_left_paren) {
         lhs = parser_parse_expression(parser, 0); 
 
