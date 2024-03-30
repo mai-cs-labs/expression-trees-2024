@@ -54,11 +54,13 @@ List lexical_scan(const String* const string)
 
 bool token_type_is_operator(const TokenType type)
 {
-    return TokenType_add <= type && type <= TokenType_power;
+    assert(0 <= type && type < TokenType__count);
+    return TokenType__operators_begin < type && type < TokenType__operators_end;
 }
 
 bool token_type_is_right_associative(const TokenType type)
 {
+    assert(0 <= type && type < TokenType__count);
     return type == TokenType_power;
 }
 
@@ -122,10 +124,19 @@ static LexerState lexer_scan_text(Lexer* const lexer)
         case '^':
             type = TokenType_power;
             break;
+
+        case '(':
+            type = TokenType_left_paren;
+            break;
+
+        case ')':
+            type = TokenType_right_paren;
+            break;
         }
 
         lexer_emit(lexer, type);
     }
+
     else if (c == (uint8_t)EOF)
         return NULL;
 
@@ -278,7 +289,8 @@ static bool is_digit(const uint8_t c)
 
 static bool is_operator(const uint8_t c)
 {
-    return c == '+' || c == '-' || c == '*' || c == '/' || c == '^';
+    return c == '+' || c == '-' || c == '*' || c == '/' || c == '^' ||
+           c == '(' || c == ')';
 }
 
 static bool is_letter(const uint8_t c)

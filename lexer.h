@@ -5,14 +5,23 @@
 #include "list.h"
 
 typedef enum token_type {
-    TokenType_eof,
-    TokenType_number,   // [+-]?[0-9]+(\.?[0-9]*)?([eE][0-9]*)?
-    TokenType_symbol,   // [a-zA-Z]
-    TokenType_add,      // +
-    TokenType_subtract, // -
-    TokenType_multiply, // *
-    TokenType_divide,   // /
-    TokenType_power,    // ^
+    TokenType_illegal,
+
+    TokenType__literals_begin,
+    TokenType_number,        // [+-]?[0-9]+(\.?[0-9]*)?([eE][0-9]*)?
+    TokenType_symbol,        // [a-zA-Z]
+    TokenType__literals_end,
+
+    TokenType__operators_begin,
+    TokenType_add,           // +
+    TokenType_subtract,      // -
+    TokenType_multiply,      // *
+    TokenType_divide,        // /
+    TokenType_power,         // ^
+    TokenType_left_paren,    // (
+    TokenType_right_paren,   // )
+    TokenType__operators_end,
+
     TokenType__count,
 } TokenType;
 
