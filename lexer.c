@@ -16,17 +16,6 @@ typedef struct lexer {
 typedef void* (*LexerState)(Lexer* const lexer);
 typedef LexerState (*LexerStateFn)(Lexer* const lexer);
 
-static const String token_type_string[] = {
-    [TokenType_eof] = String("EOF"),
-    [TokenType_number] = String("Number"),
-    [TokenType_symbol] = String("Symbol"),
-    [TokenType_add] = String("Add"),
-    [TokenType_subtract] = String("Subtract"),
-    [TokenType_multiply] = String("Multiply"),
-    [TokenType_divide] = String("Divide"),
-    [TokenType_power] = String("Power"),
-};
-
 static LexerState lexer_scan_text(Lexer* const lexer);
 static LexerState lexer_scan_number(Lexer* const lexer);
 static LexerState lexer_scan_symbol(Lexer* const lexer);
@@ -79,11 +68,16 @@ void print_tokens(const List* const tokens)
     for list_range(it, *tokens) {
         Token* token = list_node_data(it, Token);
 
-        putc('{', stderr);
-        string_debug_print(&token_type_string[token->type]);
-        fputs(": \'", stderr);
-        string_debug_print(&token->content);
-        fputs("\'}", stderr);
+        if (token->type != TokenType_illegal) {
+            putc('\'', stderr);
+            string_debug_print(&token->content);
+            putc('\'', stderr);
+        } else {
+            string_debug_print(&String("Illegal:"));
+            putc('\'', stderr);
+            string_debug_print(&token->content);
+            putc('\'', stderr);
+        }
 
         if (it->next != NULL)
             fputs(", ", stderr);
