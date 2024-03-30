@@ -21,8 +21,6 @@ typedef struct token {
     String content;
 } Token;
 
-extern const String token_type_string[];
-
 extern List lexical_scan(const String* const string);
 
 extern void print_tokens(const List* const tokens);
