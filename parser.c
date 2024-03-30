@@ -6,6 +6,10 @@
 #include "lexer.h"
 #include "tree.h"
 
+enum {
+    OPERATOR_
+};
+
 typedef struct parser {
     List input;
     Tree expr;
@@ -13,10 +17,22 @@ typedef struct parser {
 
 typedef tree_node(Token) Expr;
 
+static const size_t operator_precedence[] = {
+    [TokenType_add] = 1,
+    [TokenType_subtract] = 1,
+    [TokenType_multiply] = 2,
+    [TokenType_divide] = 2,
+    [TokenType_power] = 3,
+};
+
 static void parser_parse(Parser* const parser);
 static Expr* parser_parse_leaf(Parser* const parser);
-static Expr* parser_parse_expression(Parser* const parser);
+static Expr* parser_parse_expression(Parser* const parser, const size_t precedence);
+static Expr* parser_parse_binary(Parser* const parser,
+                                 Expr* const lhs,
+                                 const size_t precedence);
 static Token* parser_next(Parser* const parser);
+static void parser_backup(Parser* const parser);
 
 static void print_expression_inorder(Expr* const expr);
 static bool preprocess_tokens(List* const tokens);
@@ -40,25 +56,14 @@ Tree parse_expression(List* const tokens)
 void print_expression(const Tree* const tree)
 {
     assert(tree != NULL);
-
     print_expression_inorder((Expr*)tree->root);
-}
-
-static void print_expression_inorder(Expr* const expr)
-{
-    if (expr == NULL)
-        return;
-
-    print_expression_inorder((Expr*)expr->base.left);
-    string_print(&expr->data.content);
-    putchar(' ');
-    print_expression_inorder((Expr*)expr->base.right);
+    putchar('\n');
 }
 
 static void parser_parse(Parser* const parser)
 {
     assert(parser != NULL);
-    parser->expr.root = (TreeNode*)parser_parse_expression(parser);
+    parser->expr.root = (TreeNode*)parser_parse_expression(parser, 0);
 }
 
 static Expr* parser_parse_leaf(Parser* const parser)
@@ -81,37 +86,70 @@ static Expr* parser_parse_leaf(Parser* const parser)
     }
 }
 
-static Expr* parser_parse_expression(Parser* const parser)
+static Expr* parser_parse_expression(Parser* const parser, const size_t precedence)
 {
     assert(parser != NULL);
 
     Expr* lhs = parser_parse_leaf(parser);
-    if (lhs == NULL) {
+    if (lhs == NULL)
+        return NULL;
+
+    if (token_type_is_operator(lhs->data.type)) {
+        // TODO: Log error: leaf expected before operator
         return NULL;
     }
+
+    for (;;) {
+        Expr* binary = parser_parse_binary(parser, lhs, precedence);
+
+        if (binary == NULL) {
+            // TODO: Log error: expected leaf after operator
+            break;
+        }
+
+        if (binary == lhs)
+            break;
+
+        parser_backup(parser);
+        lhs = binary;
+    }
+
+    return lhs;
+}
+
+static Expr* parser_parse_binary(Parser* const parser,
+                                 Expr* const lhs,
+                                 const size_t precedence)
+{
+    assert(parser != NULL);
+    assert(lhs != NULL);
 
     Token* operator = parser_next(parser);
 
     if (operator != NULL && token_type_is_operator(operator->type)) {
-        Expr* rhs = parser_parse_expression(parser);
-        if (rhs == NULL) {
-            tree_node_destroy((TreeNode*)lhs);
-            return NULL;
+        const size_t lhs_precedence = operator_precedence[operator->type];
+
+        if (lhs_precedence > precedence) {
+            Expr* rhs = parser_parse_expression(parser, lhs_precedence);
+            if (rhs == NULL) {
+                // TODO: Log error
+                return NULL;
+            }
+
+            Expr* result = tree_node_create(Expr);
+            if (result == NULL) {
+                tree_node_destroy((TreeNode*)rhs);
+                tree_node_destroy((TreeNode*)lhs);
+                // TODO: Log error: failed to allocate binary expression
+                return NULL;
+            }
+
+            result->data = *operator;
+            result->base.left = (TreeNode*)lhs;
+            result->base.right = (TreeNode*)rhs;
+
+            return result;
         }
-
-        Expr* result = tree_node_create(Expr);
-        if (result == NULL) {
-            tree_node_destroy((TreeNode*)rhs);
-            tree_node_destroy((TreeNode*)lhs);
-            // TODO: Log error: failed to allocate binary expression
-            return NULL;
-        }
-
-        result->data = *operator;
-        result->base.left = (TreeNode*)lhs;
-        result->base.right = (TreeNode*)rhs;
-
-        return result;
     }
 
     return lhs;
@@ -130,6 +168,14 @@ static Token* parser_next(Parser* const parser)
     return result;
 }
 
+static void parser_backup(Parser* const parser)
+{
+    assert(parser != NULL);
+
+    if (parser->input.head != NULL)
+        parser->input.head = parser->input.head->prev;
+}
+
 #if 0
 static Token* parser_peek(Parser* const parser)
 {
@@ -141,6 +187,30 @@ static Token* parser_peek(Parser* const parser)
     return list_node_data(parser->input.head, Token);
 }
 #endif
+
+static void print_expression_inorder(Expr* const expr)
+{
+    if (expr == NULL)
+        return;
+
+    if (expr->base.left != NULL && expr->base.right != NULL)
+        putchar('(');
+
+    print_expression_inorder((Expr*)expr->base.left);
+
+    if (expr->base.left != NULL)
+        putchar(' ');
+
+    string_print(&expr->data.content);
+
+    if (expr->base.right != NULL)
+        putchar(' ');
+
+    print_expression_inorder((Expr*)expr->base.right);
+
+    if (expr->base.left != NULL && expr->base.right != NULL)
+        putchar(')');
+}
 
 // When two numbers are together and the second number contains an operator
 // at the beginning of it, then input was {"X", "+Y"} or {"X", "-Y"}, thus
