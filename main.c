@@ -4,6 +4,7 @@
 #include "common.h"
 #include "string.h"
 #include "list.h"
+#include "tree.h"
 #include "lexer.h"
 #include "parser.h"
 
@@ -18,8 +19,8 @@ int main(int argc, char* argv[])
     List tokens = lexical_scan(&input);
     Tree tree = parse_expression(&tokens);
 
-    print_tokens(&tokens);
-    print_expression(&tree); 
+    print_expression(&tree);
 
+    tree_deinit(&tree); 
     list_deinit(&tokens);
 }

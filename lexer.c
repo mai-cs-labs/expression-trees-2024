@@ -65,6 +65,11 @@ List lexical_scan(const String* const string)
     return lexer.tokens;
 }
 
+bool token_type_is_operator(const TokenType type)
+{
+    return TokenType_add <= type && type <= TokenType_power;
+}
+
 void print_tokens(const List* const tokens)
 {
     for list_range(it, *tokens) {
