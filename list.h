@@ -26,6 +26,12 @@ extern void* list__insert_back(List* const list, const size_t size);
 #define list_insert_back(list_p, type) \
     ((type*)list__insert_back((list_p), sizeof(type)))
 
+extern void* list__insert_after(List* const list, 
+                                ListNodeBase* const node,
+                                const size_t size);
+#define list_insert_after(list_p, node_p, type) \
+    ((type*)list__insert_after((list_p), (node_p), sizeof(type)))
+
 #define list_range(it, list) \
     (ListNodeBase* it = (list).head; (it) != NULL; (it) = (it)->next)
 

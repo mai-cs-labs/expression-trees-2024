@@ -73,3 +73,29 @@ void* list__insert_back(List* const list, const size_t size)
 
     return (void*)((char*)node + sizeof(ListNodeBase));
 }
+
+void* list__insert_after(List* const list, 
+                         ListNodeBase* const node,
+                         const size_t size)
+{
+    assert(list != NULL);
+    assert(node != NULL);
+    assert(size > 0);
+
+    ListNodeBase* next = malloc(sizeof(ListNodeBase) + size);
+    if (next == NULL)
+        return NULL;
+
+    next->prev = node;
+    next->next = node->next;
+
+    if (node == list->tail)
+        list->tail = next;
+
+    if (node->next != NULL)
+        node->next->prev = next;
+
+    node->next = next;
+
+    return (void*)((char*)next + sizeof(ListNodeBase));
+}
