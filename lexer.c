@@ -72,20 +72,24 @@ bool token_type_is_right_associative(const TokenType type)
 
 void print_tokens(const List* const tokens)
 {
+    assert(tokens != NULL);
+
     putc('[', stderr);
     for list_range(it, *tokens) {
         Token* token = list_node_data(it, Token);
+        const TokenType type = token->type;
+        const String* content = &token->content;
 
-        if (token->type != TokenType_illegal) {
-            putc('\'', stderr);
-            string_debug_print(&token->content);
-            putc('\'', stderr);
-        } else {
+        const char delim = token_type_is_literal(type) ? '\"' :
+                           token_type_is_operator(type) ? '\'' :
+                           '`';
+
+        if (type == TokenType_illegal)
             string_debug_print(&String("Illegal:"));
-            putc('\'', stderr);
-            string_debug_print(&token->content);
-            putc('\'', stderr);
-        }
+
+        putc(delim, stderr);
+        string_debug_print(content);
+        putc(delim, stderr);
 
         if (it->next != NULL)
             fputs(", ", stderr);
