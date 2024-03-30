@@ -9,20 +9,23 @@
 #include "parser.h"
 
 static bool verbose = false;
+static bool dry_run = false;
 
 static void print_short_usage(void)
 {
-    fputs("Usage: simplify [-h|--help] [-v] {expression}\n", stderr);
+    fputs("Usage: simplify [-h|--help] [-v] [-d] {expression}\n", stderr);
     exit(EXIT_SUCCESS);
 }
 
 static void print_long_usage(void)
 {
-    fputs("Usage: simplify [-h|--help] [-v] {expression}\n\n"
+    fputs("Usage: simplify [-h|--help] [-v] [-d] {expression}\n\n"
         "\t-h, --help\n"
         "\t\tOutput a usage message and exit\n\n"
         "\t-v\n"
-        "\t\tEnable output of debug messages\n", stderr);
+        "\t\tEnable output of debug messages\n\n"
+        "\t-d\n"
+        "\t\tDry run: do not parse expression, implies -v\n", stderr);
     exit(EXIT_SUCCESS);
 }
 
@@ -34,6 +37,10 @@ int main(int argc, char* argv[])
     int argp = 1;
     while (argp != argc) {
         if (strcmp(argv[argp], "-v") == 0) {
+            verbose = true;
+            ++argp;
+        } else if (strcmp(argv[argp], "-d") == 0) {
+            dry_run = true;
             verbose = true;
             ++argp;
         } else if (strcmp(argv[argp], "-h") == 0) {
@@ -54,7 +61,8 @@ int main(int argc, char* argv[])
     if (verbose)
         print_tokens(&tokens);
 
-    print_expression(&tree, verbose);
+    if (!dry_run)
+        print_expression(&tree, verbose);
 
     tree_deinit(&tree); 
     list_deinit(&tokens);
