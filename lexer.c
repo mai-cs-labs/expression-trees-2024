@@ -58,14 +58,13 @@ bool check_scan_errors(const List* const tokens)
     for list_range(it, *tokens) {
         Token* token = list_node_data(it, Token);
 
-        if (token->type == TokenType_error)
+        if (token->type == TokenType_illegal) {
             result = true;
-        else
-            break;
 
-        fputs("Lexer error: ", stderr);
-        string_debug_print(&token->content);
-        fprintf(stderr, " at %lu\n", token->position);
+            fputs("Error: illegal character \'", stderr);
+            string_debug_print(&token->content);
+            fprintf(stderr, "\' encountered at %lu\n", token->position);
+        }
     }
 
     return result;
@@ -78,19 +77,8 @@ void debug_print_tokens(const List* const tokens)
     putc('[', stderr);
     for list_range(it, *tokens) {
         Token* token = list_node_data(it, Token);
-        const TokenType type = token->type;
-        const String* content = &token->content;
 
-        const char delim = token_type_is_literal(type) ? '\"' :
-                           token_type_is_operator(type) ? '\'' :
-                           '`';
-
-        if (type == TokenType_illegal)
-            string_debug_print(&String("Illegal:"));
-
-        putc(delim, stderr);
-        string_debug_print(content);
-        putc(delim, stderr);
+        string_debug_print(&token->content);
 
         if (it->next != NULL)
             fputs(", ", stderr);

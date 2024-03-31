@@ -9,10 +9,9 @@
 
 typedef enum token_type {
     TokenType_illegal,
-    TokenType_error,
 
     TokenType__literals_begin,
-    TokenType_number,        // [0-9]+(\.[0-9]+)?
+    TokenType_number,        // [0-9]+(\.[0-9]*)?
     TokenType_symbol,        // [a-zA-Z][a-zA-Z0-9_]*
     TokenType__literals_end,
 
