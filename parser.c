@@ -29,6 +29,7 @@ static Expr* parser_parse_expression(Parser* const parser, const size_t preceden
 static Expr* parser_parse_binary(Parser* const parser,
                                  Expr* const lhs,
                                  const size_t precedence);
+static Expr* parser_parse_unary(Parser* const parser, const Token* const operator);
 
 static Token* parser_next(Parser* const parser);
 static void parser_backup(Parser* const parser);
@@ -100,47 +101,45 @@ static Expr* parser_parse_expression(Parser* const parser, const size_t preceden
 
     Expr* lhs;
 
-    Token* next = parser_next(parser);
-    if (next == NULL)
+    Token* current = parser_next(parser);
+    if (current == NULL)
         return NULL;
-    
-    if (next->type == TokenType_left_paren) {
-        lhs = parser_parse_expression(parser, 0); 
 
-        parser_backup(parser); 
-        next = parser_next(parser); 
+    if (token_type_is_literal(current->type)) {
+        parser_backup(parser);
 
-        if (next->type != TokenType_right_paren) {
-            fputs("Expression was not closed, \')\' expected\n", stderr);
-            return lhs;
-        }
-    }
-    else if (token_type_is_unary_operator(next->type)) {
-        Token* ahead = parser_next(parser);
-        if (ahead == NULL) {
-            // TODO: Log error
+        lhs = parser_parse_leaf(parser);
+
+        if (lhs == NULL) {
+            fputs("Failed to allocate expression node\n", stderr);
             return NULL;
         }
+    }
+    else if (token_type_is_unary_operator(current->type)) {
+        lhs = parser_parse_unary(parser, current);
 
-        Expr* unary = tree_node_create(Expr);
-        unary->data = *next;
+        if (lhs == NULL)
+            return NULL;
+    }
+    else if (current->type == TokenType_left_paren) {
+        lhs = parser_parse_expression(parser, 0);
 
-        if (token_type_is_literal(ahead->type)) {
-            parser_backup(parser);
-            unary->base.left = (TreeNode*)parser_parse_leaf(parser);
+        parser_backup(parser);
+        Token* next = parser_next(parser);
+
+        if (next->type != TokenType_right_paren) {
+            fputs("Expression was not closed, expected \')\'\n", stderr);
+            return NULL;
         }
-        else if (ahead->type == TokenType_left_paren)
-            unary->base.left = (TreeNode*)parser_parse_expression(parser, 0);
-
-        lhs = unary;
+    }
+    else if (current->type == TokenType_right_paren) {
+        parser_backup(parser);
+        return NULL;
     }
     else {
-        parser_backup(parser);
-        lhs = parser_parse_leaf(parser);
-    }
-
-    if (lhs == NULL) {
-        // TODO: Log error: leaf expected before operator
+        fputs("Expected expression, found operator \'", stderr);
+        string_debug_print(&current->content);
+        fprintf(stderr, "\' at %lu\n", current->position);
         return NULL;
     }
 
@@ -201,13 +200,52 @@ static Expr* parser_parse_binary(Parser* const parser,
     return lhs;
 }
 
+static Expr* parser_parse_unary(Parser* const parser, const Token* const operator)
+{
+    assert(parser != NULL);
+
+    Token* next = parser_next(parser);
+    if (next == NULL) {
+        fputs("Expected expression after unary operator at ", stderr);
+        fprintf(stderr, "%lu\n", operator->position);
+        return NULL;
+    }
+
+    Expr* const result = tree_node_create(Expr);
+
+    if (result == NULL) {
+        fputs("Failed to allocate unary expression node\n", stderr);
+        return NULL;
+    }
+
+    if (token_type_is_literal(next->type)) {
+        parser_backup(parser);
+        result->base.left = (TreeNode*)parser_parse_leaf(parser);
+    }
+    else if (next->type == TokenType_left_paren)
+        result->base.left = (TreeNode*)parser_parse_expression(parser, 0);
+    else {
+        tree_node_destroy((TreeNode*)result);
+
+        fputs("Expected literal or parenthesised expression, found \'", stderr);
+        string_debug_print(&next->content);
+        fprintf(stderr, "' at %lu\n", next->position);
+
+        return NULL;
+    }
+
+    result->data = *operator;
+
+    return result;
+}
+
 static Token* parser_next(Parser* const parser)
 {
     assert(parser != NULL);
 
     if (parser->input.head == NULL)
         return NULL;
-    
+
     Token* result = list_node_data(parser->input.head, Token);
     parser->input.head = parser->input.head->next;
 
