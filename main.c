@@ -57,8 +57,11 @@ int main(int argc, char* argv[])
     String input = string_init(argv[argp]);
     List tokens = lexical_scan(&input);
 
+    if (check_scan_errors(&tokens))
+        goto cleanup;
+
     if (verbose)
-        print_tokens(&tokens);
+        debug_print_tokens(&tokens);
 
     if (!dry_run) {
         Tree tree = parse_expression(&tokens);
@@ -66,5 +69,6 @@ int main(int argc, char* argv[])
         tree_deinit(&tree); 
     }
 
+cleanup:
     list_deinit(&tokens);
 }

@@ -49,6 +49,55 @@ List lexical_scan(const String* const string)
     return lexer.tokens;
 }
 
+bool check_scan_errors(const List* const tokens)
+{
+    assert(tokens != NULL);
+
+    bool result = false;
+
+    for list_range(it, *tokens) {
+        Token* token = list_node_data(it, Token);
+
+        if (token->type == TokenType_error)
+            result = true;
+        else
+            break;
+
+        fputs("Lexer error: ", stderr);
+        string_debug_print(&token->content);
+        fprintf(stderr, " at %lu\n", token->position);
+    }
+
+    return result;
+}
+
+void debug_print_tokens(const List* const tokens)
+{
+    assert(tokens != NULL);
+
+    putc('[', stderr);
+    for list_range(it, *tokens) {
+        Token* token = list_node_data(it, Token);
+        const TokenType type = token->type;
+        const String* content = &token->content;
+
+        const char delim = token_type_is_literal(type) ? '\"' :
+                           token_type_is_operator(type) ? '\'' :
+                           '`';
+
+        if (type == TokenType_illegal)
+            string_debug_print(&String("Illegal:"));
+
+        putc(delim, stderr);
+        string_debug_print(content);
+        putc(delim, stderr);
+
+        if (it->next != NULL)
+            fputs(", ", stderr);
+    }
+    fputs("]\n", stderr);
+}
+
 bool token_type_is_literal(const TokenType type)
 {
     assert(0 <= type && type < TokenType__count);
@@ -77,33 +126,6 @@ bool token_type_is_right_associative(const TokenType type)
 {
     assert(0 <= type && type < TokenType__count);
     return type == TokenType_power;
-}
-
-void print_tokens(const List* const tokens)
-{
-    assert(tokens != NULL);
-
-    putc('[', stderr);
-    for list_range(it, *tokens) {
-        Token* token = list_node_data(it, Token);
-        const TokenType type = token->type;
-        const String* content = &token->content;
-
-        const char delim = token_type_is_literal(type) ? '\"' :
-                           token_type_is_operator(type) ? '\'' :
-                           '`';
-
-        if (type == TokenType_illegal)
-            string_debug_print(&String("Illegal:"));
-
-        putc(delim, stderr);
-        string_debug_print(content);
-        putc(delim, stderr);
-
-        if (it->next != NULL)
-            fputs(", ", stderr);
-    }
-    fputs("]\n", stderr);
 }
 
 static LexerState lexer_scan_text(Lexer* const lexer)
