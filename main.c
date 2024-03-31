@@ -58,17 +58,23 @@ int main(int argc, char* argv[])
     List tokens = lexical_scan(&input);
 
     if (check_scan_errors(&tokens))
-        goto cleanup;
+        goto error_scan;
 
     if (verbose)
         debug_print_tokens(&tokens);
 
-    if (!dry_run) {
-        Tree tree = parse_expression(&tokens);
-        print_expression(&tree, verbose);
-        tree_deinit(&tree); 
-    }
+    if (dry_run)
+        goto cleanup;
+
+    Tree tree = parse_expression(&tokens);
+
+    if (verbose)
+        debug_print_expression(&tree);
+    else
+        print_expression(&tree);
 
 cleanup:
+    tree_deinit(&tree);
+error_scan:
     list_deinit(&tokens);
 }
