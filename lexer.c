@@ -34,10 +34,10 @@ List lexical_scan(const String* const string)
     assert(string != NULL);
 
     Lexer lexer = {
-        .input = string, 
-        .position = 0, 
-        .start = 0, 
-        .tokens = List(), 
+        .input = string,
+        .position = 0,
+        .start = 0,
+        .tokens = List(),
         .stop = false,
     };
 
@@ -163,6 +163,10 @@ static LexerState lexer_scan_text(Lexer* const lexer)
         case ')':
             type = TokenType_right_paren;
             break;
+
+        default:
+            type = TokenType_illegal;
+            break;
         }
 
         lexer_emit(lexer, type);
@@ -180,18 +184,18 @@ static LexerState lexer_scan_number(Lexer* const lexer)
     assert(lexer != NULL);
 
     while (isdigit(lexer_next(lexer)));
-    lexer_backup(lexer); 
+    lexer_backup(lexer);
 
     if (lexer_peek(lexer) == '.') {
         lexer_next(lexer);
 
         while (isdigit(lexer_next(lexer)));
-        lexer_backup(lexer); 
+        lexer_backup(lexer);
     }
-    
+
     lexer_emit(lexer, TokenType_number);
 
-    return (LexerState)lexer_scan_text; 
+    return (LexerState)lexer_scan_text;
 }
 
 static LexerState lexer_scan_symbol(Lexer* const lexer)
@@ -217,7 +221,7 @@ static uint8_t lexer_next(Lexer* const lexer)
         lexer->stop = true;
         return '\0';
     }
-    
+
     uint8_t result = lexer->input->text[lexer->position];
     ++lexer->position;
 
@@ -254,7 +258,11 @@ static void lexer_emit(Lexer* const lexer, const TokenType type)
     assert(0 <= type && type < TokenType__count);
 
     String content = string_trim(lexer->input, lexer->start, lexer->position);
-    *list_insert_back(&lexer->tokens, Token) = (Token){type, lexer->start + 1, content};
+    *list_insert_back(&lexer->tokens, Token) = (Token){
+        .type = type,
+        .position = lexer->start + 1,
+        .content = content,
+    };
 
     lexer->start = lexer->position;
 }
