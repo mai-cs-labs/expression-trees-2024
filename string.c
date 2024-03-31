@@ -56,22 +56,6 @@ String string_trim(const String* const string,
     return (String){string->text + begin, length};
 }
 
-size_t string_index(const String* const string, const uint8_t c)
-{
-    assert(string != NULL);
-
-    size_t index = 0;
-
-    while (index < string->length) {
-        if (string->text[index] == c)
-            break;
-
-        ++index;
-    }
-
-    return index;
-}
-
 void string_write(const String* const string, FILE* const file)
 {
     assert(string != NULL);

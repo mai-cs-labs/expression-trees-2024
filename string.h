@@ -24,8 +24,6 @@ extern String string_trim(const String* const string,
                           const size_t begin,
                           const size_t end);
 
-extern size_t string_index(const String* const string, const uint8_t c);
-
 extern void string_write(const String* const string, FILE* const file);
 #define string_print(string_p) string_write((string_p), stdout)
 #define string_debug_print(string_p) string_write((string_p), stderr)

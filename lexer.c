@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <ctype.h>
 
 typedef struct lexer {
     const String* const input;
@@ -24,14 +25,9 @@ static uint8_t lexer_next(Lexer* const lexer);
 static void lexer_backup(Lexer* const lexer);
 static uint8_t lexer_peek(Lexer* const lexer);
 static void lexer_ignore(Lexer* const lexer);
-static bool lexer_accept(Lexer* const lexer, const String* const valid);
-static void lexer_accept_run(Lexer* const lexer, const String* const valid);
 static void lexer_emit(Lexer* const lexer, const TokenType type);
 
-static bool is_digit(const uint8_t c);
 static bool is_operator(const uint8_t c);
-static bool is_letter(const uint8_t c);
-static bool is_blank(const uint8_t c);
 
 List lexical_scan(const String* const string)
 {
@@ -116,11 +112,13 @@ static LexerState lexer_scan_text(Lexer* const lexer)
 
     const uint8_t c = lexer_next(lexer);
 
-    if (is_digit(c)) {
+    if (isspace(c))
+        lexer_ignore(lexer);
+    else if (isdigit(c)) {
         lexer_backup(lexer);
         return (LexerState)lexer_scan_number;
     }
-    else if (is_letter(c)) {
+    else if (isalpha(c)) {
         lexer_backup(lexer);
         return (LexerState)lexer_scan_symbol;
     }
@@ -159,10 +157,7 @@ static LexerState lexer_scan_text(Lexer* const lexer)
 
         lexer_emit(lexer, type);
     }
-    else if (is_blank(c)) {
-        lexer_ignore(lexer);
-    }
-    else if (c == (uint8_t)EOF)
+    else if (c == '\0')
         return NULL;
     else
         lexer_emit(lexer, TokenType_illegal);
@@ -174,23 +169,16 @@ static LexerState lexer_scan_number(Lexer* const lexer)
 {
     assert(lexer != NULL);
 
-    const String digits = String("0123456789");
-    lexer_accept_run(lexer, &digits); 
+    while (isdigit(lexer_next(lexer)));
+    lexer_backup(lexer); 
 
-    if (lexer_accept(lexer, &String(".")))
-        lexer_accept_run(lexer, &digits);
-
-    if (lexer_accept(lexer, &String("eE")))
-        lexer_accept_run(lexer, &digits);
-
-    uint8_t next = lexer_peek(lexer);
-    if (is_letter(next)) {
+    if (lexer_peek(lexer) == '.') {
         lexer_next(lexer);
-        lexer_ignore(lexer);
-        // TODO: Return error
-        return (LexerState)lexer_scan_text;
-    }
 
+        while (isdigit(lexer_next(lexer)));
+        lexer_backup(lexer); 
+    }
+    
     lexer_emit(lexer, TokenType_number);
 
     return (LexerState)lexer_scan_text; 
@@ -202,9 +190,9 @@ static LexerState lexer_scan_symbol(Lexer* const lexer)
 
     uint8_t c = lexer_next(lexer);
 
-    while (is_letter(c))
+    while (isalpha(c) || isdigit(c) || c == '_')
         c = lexer_next(lexer);
-    
+
     lexer_backup(lexer);
     lexer_emit(lexer, TokenType_symbol);
 
@@ -217,7 +205,7 @@ static uint8_t lexer_next(Lexer* const lexer)
 
     if (lexer->position >= lexer->input->length) {
         lexer->stop = true;
-        return EOF;
+        return '\0';
     }
     
     uint8_t result = lexer->input->text[lexer->position];
@@ -250,58 +238,20 @@ static void lexer_ignore(Lexer* const lexer)
     lexer->start = lexer->position;
 }
 
-static bool lexer_accept(Lexer* const lexer, const String* const valid)
-{
-    assert(lexer != NULL);
-    assert(valid != NULL);
-
-    if (string_index(valid, lexer_next(lexer)) < valid->length)
-        return true;
-
-    lexer_backup(lexer); 
-
-    return false;
-}
-
-static void lexer_accept_run(Lexer* const lexer, const String* const valid)
-{
-    assert(lexer != NULL);
-    assert(valid != NULL);
-
-    while (string_index(valid, lexer_next(lexer)) < valid->length);
-
-    lexer_backup(lexer); 
-}
-
 static void lexer_emit(Lexer* const lexer, const TokenType type)
 {
     assert(lexer != NULL);
     assert(0 <= type && type < TokenType__count);
 
     String content = string_trim(lexer->input, lexer->start, lexer->position);
-    *list_insert_back(&lexer->tokens, Token) = (Token){type, lexer->start, content};
+    *list_insert_back(&lexer->tokens, Token) = (Token){type, lexer->start + 1, content};
 
     lexer->start = lexer->position;
-}
-
-static bool is_digit(const uint8_t c)
-{
-    return '0' <= c && c <= '9';
 }
 
 static bool is_operator(const uint8_t c)
 {
     return c == '+' || c == '-' || c == '*' || c == '/' || c == '^' ||
            c == '(' || c == ')';
-}
-
-static bool is_letter(const uint8_t c)
-{
-    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
-}
-
-static bool is_blank(const uint8_t c)
-{
-    return c == ' ' || c == '\t' || c == '\n' || c == '\r';
 }
 
