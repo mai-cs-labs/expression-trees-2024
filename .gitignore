@@ -1,7 +1,7 @@
 .vscode/
 .vs/
 build/
-simplify
+expr
 *.exe
 *.obj
 *.o

@@ -1,19 +1,21 @@
+SHELL := /bin/sh
+
 CC ?= cc
 LD := $(CC)
 
 CFLAGS := -std=c99 -O0 -g -Wall -Wextra -Werror
 LDFLAGS := -fsanitize=address,leak,undefined
 
-all: simplify
+all: expr
 
-simplify: string.o list.o tree.o lexer.o parser.o main.o
+expr: string.o list.o tree.o lexer.o parser.o main.o
 	$(LD) -o $@ $(LDFLAGS) $^
 
 .c.o:
 	$(CC) -o $@ $(CFLAGS) -c $^
 
 clean:
-	rm simplify
+	rm expr
 	rm *.o
 
 .PHONY: all clean
