@@ -30,6 +30,8 @@ static void print_long_usage(void)
 
 int main(int argc, char* argv[])
 {
+    int result = EXIT_SUCCESS;
+
     if (argc == 1)
         print_short_usage();
 
@@ -56,11 +58,24 @@ int main(int argc, char* argv[])
     String input = string_init(argv[argp]);
     List tokens = lexical_scan(&input);
 
-    if (check_illegal_tokens(&tokens))
+    if (check_illegal_tokens(&tokens)) {
+        result = EXIT_FAILURE;
         goto error_scan;
+    }
 
     debug_print_tokens(&tokens);
 
+    Ast* ast = ast_parse(&tokens);
+    if (ast == NULL) {
+        result = EXIT_FAILURE;
+        goto error_scan;
+    }
+
+    ast_print(ast);
+
+    ast_destroy(&ast);
 error_scan:
     list_deinit(&tokens);
+
+    return result;
 }

@@ -3,7 +3,7 @@ SHELL := /bin/sh
 CC ?= cc
 LD := $(CC)
 
-CFLAGS := -std=c99 -O0 -g -Wall -Wextra -Werror
+CFLAGS := -std=c99 -O0 -g -Wall -Wextra -Werror -Wno-switch
 LDFLAGS := -fsanitize=address,leak,undefined
 
 all: expr
