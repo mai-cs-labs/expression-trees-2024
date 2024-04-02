@@ -35,7 +35,7 @@ typedef struct token {
 } Token;
 
 extern List lexical_scan(const String* const string);
-extern bool check_scan_errors(const List* const tokens);
+extern bool check_illegal_tokens(const List* const tokens);
 extern void debug_print_tokens(const List* const tokens);
 
 extern bool token_type_is_literal(const TokenType type);

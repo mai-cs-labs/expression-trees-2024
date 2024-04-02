@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
     String input = string_init(argv[argp]);
     List tokens = lexical_scan(&input);
 
-    if (check_scan_errors(&tokens))
+    if (check_illegal_tokens(&tokens))
         goto error_scan;
 
     if (verbose)

@@ -49,7 +49,7 @@ List lexical_scan(const String* const string)
     return lexer.tokens;
 }
 
-bool check_scan_errors(const List* const tokens)
+bool check_illegal_tokens(const List* const tokens)
 {
     assert(tokens != NULL);
 
