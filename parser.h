@@ -6,70 +6,52 @@
 
 #include "string.h"
 #include "list.h"
+#include "lexer.h"
 
-typedef enum ast_type {
-    AstType_empty,
-    AstType_literal,
-    AstType_unary_operator,
-    AstType_binary_operator,
-    AstType__count,
-} AstType;
+typedef enum expression_type {
+    ExpressionType_Empty,
+    ExpressionType_Literal,
+    ExpressionType_Unary,
+    ExpressionType_Binary,
+    ExpressionType__count,
+} ExpressionType;
 
-typedef enum ast_literal_type {
-    AstLiteralType_number,
-    AstLiteralType_symbol,
-    AstLitearlType__count,
-} AstLiteralType;
+typedef enum literal_tag {
+    LiteralTag_Number,
+    LiteralTag_Symbol,
+    LiteralTag__count,
+} LiteralTag;
 
-typedef enum ast_operator {
-    AstOperator_add,
-    AstOperator_subtract,
-    AstOperator_multiply,
-    AstOperator_divide,
-    AstOperator_raise_to,
-    AstOperator_unary_plus,
-    AstOperator_unary_minus,
-    AstOperator__count,
-} AstOperator;
-
-typedef struct ast_expression {
+typedef struct expression {
+    ExpressionType type;
     bool parenthesised;
-} AstExpression;
+} Expression;
 
-typedef struct ast_literal {
-    AstExpression base;
-    const AstLiteralType type;
+typedef struct expression_literal {
+    struct expression base;
+    LiteralTag tag;
     union {
         double number;
         String symbol;
     };
-} AstLiteral;
+} Literal;
 
-typedef struct ast_unary_operator {
-    AstExpression base;
-    AstOperator operator;
-    AstExpression* subexpression;
-} AstUnaryOperator;
+typedef struct expression_unary {
+    struct expression base;
+    Token operator;
+    Expression* subexpression;
+} UnaryExpression;
 
-typedef struct ast_binary_operator {
-    AstExpression base;
-    AstOperator operator;
-    AstExpression* left;
-    AstExpression* right;
-} AstBinaryOperator;
+typedef struct expression_binary {
+    struct expression base;
+    Token operator;
+    Expression* left;
+    Expression* right;
+} BinaryExpression;
 
-typedef struct ast {
-    AstType type;
-    union {
-        struct ast_literal literal;
-        struct ast_unary_operator unary;
-        struct ast_binary_operator binary;
-    };
-} Ast;
-
-extern Ast* ast_parse(const List* const tokens);
-extern void ast_destroy(Ast** const ast);
-extern void ast_print(const Ast* const ast);
+extern Expression* expression_create(const List* const tokens);
+extern void expression_destroy(Expression** const expression);
+extern void expression_print(const Expression* const expression);
 
 // Grammar:
 //

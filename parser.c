@@ -4,9 +4,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "lexer.h"
-#include "string.h"
-
 #define LOG(message) fputs((message), stderr)
 #define LOGF(format, ...) fprintf(stderr, (format), __VA_ARGS__)
 #define LOGC(ch) fputc((ch), stderr)
@@ -15,24 +12,17 @@ typedef struct parser {
     List tokens;
 } Parser;
 
-static const String operator_string[AstOperator__count] = {
-    [AstOperator_add]         = String("+"),
-    [AstOperator_subtract]    = String("-"),
-    [AstOperator_multiply]    = String("*"),
-    [AstOperator_divide]      = String("/"),
-    [AstOperator_raise_to]    = String("^"),
-    [AstOperator_unary_plus]  = String("+"),
-    [AstOperator_unary_minus] = String("-"),
-};
+static Expression* parser_parse(Parser* const parser);
 
-static Ast* ast_create(const AstType type);
-static void ast_clear(Ast* const ast);
+static void expression_clear(Expression* const expression);
+static Expression* expression__create(const ExpressionType tag, const size_t size);
+static void expression__print(const Expression* const expression);
 
-static void ast__print(const Ast* const ast);
+static Literal* expression_literal_create(void);
+static UnaryExpression* expression_unary_create(void);
+static BinaryExpression* expression_binary_create(void);
 
-static Ast* parser_parse(Parser* const parser);
-
-Ast* ast_parse(const List* const tokens)
+Expression* expression_create(const List* const tokens)
 {
     assert(tokens != NULL);
 
@@ -43,25 +33,52 @@ Ast* ast_parse(const List* const tokens)
     return parser_parse(&parser);
 }
 
-void ast_destroy(Ast** const ast)
+void expression_destroy(Expression** const expression)
 {
-    assert(ast != NULL);
-    ast_clear(*ast);
-    *ast = NULL;
+    assert(expression != NULL);
+    expression_clear(*expression);
+    *expression = NULL;
 }
 
-void ast_print(const Ast* const ast)
+void expression_print(const Expression* const expression)
 {
-    assert(ast != NULL);
-    ast__print(ast);
+    assert(expression != NULL);
+    expression__print(expression);
     putc('\n', stdout);
 }
 
-static Ast* ast_create(const AstType type)
+static Expression* parser_parse(Parser* const parser)
 {
-    assert(0 <= type && type < AstType__count);
+    assert(parser != NULL);
+    return expression__create(ExpressionType_Empty, sizeof(Expression));
+}
 
-    Ast* const result = malloc(sizeof(Ast));
+static void expression_clear(Expression* const expression)
+{
+    assert(expression != NULL);
+
+    switch (expression->type) {
+    case ExpressionType_Unary: {
+        const UnaryExpression* const unary = (UnaryExpression*)expression;
+        expression_clear(unary->subexpression);
+    } break;
+
+    case ExpressionType_Binary: {
+        const BinaryExpression* const binary = (BinaryExpression*)expression;
+        expression_clear(binary->left);
+        expression_clear(binary->right);
+    } break;
+    }
+
+    free(expression);
+}
+
+static Expression* expression__create(const ExpressionType type, const size_t size)
+{
+    assert(0 <= type && type < ExpressionType__count);
+    assert(size > 0);
+
+    Expression* const result = calloc(1, size);
     if (result == NULL)
         return NULL;
 
@@ -70,43 +87,29 @@ static Ast* ast_create(const AstType type)
     return result;
 }
 
-static void ast_clear(Ast* const ast)
+static void expression__print(const Expression* const expression)
 {
-    assert(ast != NULL);
+    assert(expression != NULL);
 
-    if (ast->type == AstType_unary_operator)
-        ast_clear((Ast*)ast->unary.subexpression);
-    else if (ast->type == AstType_binary_operator) {
-        ast_clear((Ast*)ast->binary.left);
-        ast_clear((Ast*)ast->binary.right);
-    }
-
-    free(ast);
-}
-
-static void ast__print(const Ast* const ast)
-{
-    assert(ast != NULL);
-
-    switch (ast->type) {
-    case AstType_empty: {
+    switch (expression->type) {
+    case ExpressionType_Empty: {
         fputs("()", stdout);
     } break;
 
-    case AstType_literal: {
-        const AstLiteral* const literal = &ast->literal;
+    case ExpressionType_Literal: {
+        const Literal* const literal = (Literal*)expression;
 
         const bool parenthesised = literal->base.parenthesised;
 
         if (parenthesised)
             putc('(', stdout);
 
-        switch (literal->type) {
-        case AstLiteralType_number:
+        switch (literal->tag) {
+        case LiteralTag_Number:
             fprintf(stdout, "%f", literal->number);
             break;
 
-        case AstLiteralType_symbol:
+        case LiteralTag_Symbol:
             string_print(&literal->symbol);
             break;
         }
@@ -115,27 +118,27 @@ static void ast__print(const Ast* const ast)
             putc(')', stdout);
     } break;
 
-    case AstType_unary_operator: {
-        const AstUnaryOperator* const unary = &ast->unary;
-        fputs("-", stdout);
-        ast__print((Ast*)unary->subexpression);
+    case ExpressionType_Unary: {
+        const UnaryExpression* const unary = (UnaryExpression*)expression;
+        string_print(&unary->operator.content);
+        expression__print(unary->subexpression);
     } break;
 
-    case AstType_binary_operator: {
-        const AstBinaryOperator* const binary = &ast->binary;
+    case ExpressionType_Binary: {
+        const BinaryExpression* const binary = (BinaryExpression*)expression;
 
         const bool parenthesised = binary->base.parenthesised;
 
         if (parenthesised)
             putc('(', stdout);
 
-        ast__print((Ast*)binary->left);
+        expression__print(binary->left);
 
         putc(' ', stdout);
-        string_print(&operator_string[binary->operator]);
+        string_print(&binary->operator.content);
         putc(' ', stdout);
 
-        ast__print((Ast*)binary->right);
+        expression__print(binary->right);
 
         if (parenthesised)
             putc(')', stdout);
@@ -143,8 +146,20 @@ static void ast__print(const Ast* const ast)
     }
 }
 
-static Ast* parser_parse(Parser* const parser)
+static Literal* expression_literal_create(void)
 {
-    assert(parser != NULL);
-    return ast_create(AstType_empty);
+    return (Literal*)expression__create(ExpressionType_Literal,
+                                        sizeof(Literal));
+}
+
+static UnaryExpression* expression_unary_create(void)
+{
+    return (UnaryExpression*)expression__create(ExpressionType_Unary,
+                                                sizeof(UnaryExpression));
+}
+
+static BinaryExpression* expression_binary_create(void)
+{
+    return (BinaryExpression*)expression__create(ExpressionType_Binary,
+                                                 sizeof(BinaryExpression));
 }

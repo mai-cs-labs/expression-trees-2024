@@ -65,15 +65,15 @@ int main(int argc, char* argv[])
 
     debug_print_tokens(&tokens);
 
-    Ast* ast = ast_parse(&tokens);
-    if (ast == NULL) {
+    Expression* expression = expression_create(&tokens);
+    if (expression == NULL) {
         result = EXIT_FAILURE;
         goto error_scan;
     }
 
-    ast_print(ast);
+    expression_print(expression);
 
-    ast_destroy(&ast);
+    expression_destroy(&expression);
 error_scan:
     list_deinit(&tokens);
 
