@@ -8,7 +8,7 @@ LDFLAGS := -fsanitize=address,leak,undefined
 
 all: expr
 
-expr: string.o list.o tree.o lexer.o parser.o main.o
+expr: string.o list.o lexer.o parser.o main.o
 	$(LD) -o $@ $(LDFLAGS) $^
 
 .c.o:

@@ -4,7 +4,6 @@
 
 #include "string.h"
 #include "list.h"
-#include "tree.h"
 #include "lexer.h"
 #include "parser.h"
 
@@ -60,21 +59,8 @@ int main(int argc, char* argv[])
     if (check_illegal_tokens(&tokens))
         goto error_scan;
 
-    if (verbose)
-        debug_print_tokens(&tokens);
+    debug_print_tokens(&tokens);
 
-    if (dry_run)
-        goto cleanup;
-
-    Tree tree = parse_expression(&tokens);
-
-    if (verbose)
-        debug_print_expression(&tree);
-    else
-        print_expression(&tree);
-
-cleanup:
-    tree_deinit(&tree);
 error_scan:
     list_deinit(&tokens);
 }
