@@ -14,11 +14,11 @@ typedef struct parser {
 } Parser;
 
 static const size_t operator_precedence[TokenType__count] = {
-    [TokenType_add] = 1,
-    [TokenType_subtract] = 1,
-    [TokenType_multiply] = 2,
-    [TokenType_divide] = 2,
-    [TokenType_power] = 3,
+    [TokenType_Plus] = 1,
+    [TokenType_Minus] = 1,
+    [TokenType_Multiply] = 2,
+    [TokenType_Divide] = 2,
+    [TokenType_Exponent] = 3,
 };
 
 static Expression* parser_parse_input(Parser* const parser);
@@ -180,12 +180,12 @@ static Expression* parser_parse_expression(Parser* const parser,
         parser_backup(parser);
         result = parser_parse_unary(parser);
     }
-    else if (current->type == TokenType_left_paren) {
+    else if (current->type == TokenType_LeftParen) {
         result = parser_parse_expression(parser, 0);
 
         Token* const ahead = parser_next(parser);
 
-        if (ahead == NULL || (ahead != NULL && ahead->type != TokenType_right_paren)) {
+        if (ahead == NULL || (ahead != NULL && ahead->type != TokenType_RightParen)) {
             LOG("Syntax error: mismatched \'");
             string_debug_print(&current->content);
             LOGF("\' found at position %lu\n", current->position);
@@ -198,7 +198,7 @@ static Expression* parser_parse_expression(Parser* const parser,
 
         result->parenthesised = true;
     }
-    else if (current->type == TokenType_right_paren) {
+    else if (current->type == TokenType_RightParen) {
         LOG("Syntax error: mismatched \'");
         string_debug_print(&current->content);
         LOGF("\' found at position %lu\n", current->position);
@@ -234,19 +234,19 @@ static Expression* parser_parse_expression(Parser* const parser,
             result = binary;
         }
     }
-    else if (ahead->type == TokenType_symbol) {
+    else if (ahead->type == TokenType_Symbol) {
         Expression* const rhs = parser_parse_literal(parser);
 
         BinaryExpression* const binary = expression_binary_create(
-            (Token){TokenType_multiply, 0, String("*")}, result, rhs);
+            (Token){TokenType_Multiply, 0, String("*")}, result, rhs);
 
         return (Expression*)binary;
     }
-    else if (ahead->type == TokenType_left_paren) {
+    else if (ahead->type == TokenType_LeftParen) {
         Expression* const rhs = parser_parse_expression(parser, 0);
 
         BinaryExpression* const binary = expression_binary_create(
-            (Token){TokenType_multiply, 0, String("*")},
+            (Token){TokenType_Multiply, 0, String("*")},
             result,
             (Expression*)rhs);
 
@@ -263,11 +263,11 @@ static Expression* parser_parse_literal(Parser* const parser)
     Token* const literal = parser_next(parser);
     assert(token_type_is_literal(literal->type));
 
-    if (literal->type == TokenType_number) {
+    if (literal->type == TokenType_Number) {
         return (Expression*)expression_literal_create_number(
             string_to_double(&literal->content));
     }
-    else if (literal->type == TokenType_symbol)
+    else if (literal->type == TokenType_Symbol)
         return (Expression*)expression_literal_create_symbol(&literal->content);
 
     // @NOTE: Never happens
@@ -290,10 +290,10 @@ static Expression* parser_parse_unary(Parser* const parser)
         return create_empty_expression();
     }
 
-    if (ahead->type == TokenType_number) {
+    if (ahead->type == TokenType_Number) {
         parser_next(parser);
 
-        if (operator->type == TokenType_subtract) {
+        if (operator->type == TokenType_Minus) {
             return (Expression*)expression_literal_create_number(
                 -string_to_double(&ahead->content));
         }
@@ -301,18 +301,18 @@ static Expression* parser_parse_unary(Parser* const parser)
         return (Expression*)expression_literal_create_number(
             string_to_double(&ahead->content));
     }
-    else if (ahead->type == TokenType_symbol) {
+    else if (ahead->type == TokenType_Symbol) {
         parser_next(parser);
 
         Expression* const literal = (Expression*)expression_literal_create_symbol(
             &ahead->content);
 
-        if (operator->type == TokenType_subtract)
+        if (operator->type == TokenType_Minus)
             return (Expression*)expression_unary_create(*operator, literal);
 
         return literal;
     }
-    else if (ahead->type == TokenType_left_paren) {
+    else if (ahead->type == TokenType_LeftParen) {
         return (Expression*)expression_unary_create(*operator,
             parser_parse_expression(parser, 0));
     }

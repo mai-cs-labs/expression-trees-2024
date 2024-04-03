@@ -42,9 +42,8 @@ List lexical_scan(const String* const string)
     };
 
     LexerStateFn state = lexer_scan_text;
-    while (state != NULL) {
+    while (state != NULL)
         state = (LexerStateFn)state(&lexer);
-    }
 
     return lexer.tokens;
 }
@@ -58,7 +57,7 @@ bool check_illegal_tokens(const List* const tokens)
     for list_range(it, *tokens) {
         Token* token = list_node_data(it, Token);
 
-        if (token->type == TokenType_illegal) {
+        if (token->type == TokenType_Illegal) {
             result = true;
 
             fputs("Error: illegal character \'", stderr);
@@ -101,19 +100,19 @@ bool token_type_is_operator(const TokenType type)
 bool token_type_is_binary_operator(const TokenType type)
 {
     assert(0 <= type && type < TokenType__count);
-    return TokenType_add <= type && type <= TokenType_power;
+    return TokenType_Plus <= type && type <= TokenType_Exponent;
 }
 
 bool token_type_is_unary_operator(const TokenType type)
 {
     assert(0 <= type && type < TokenType__count);
-    return type == TokenType_add || type == TokenType_subtract;
+    return type == TokenType_Plus || type == TokenType_Minus;
 }
 
 bool token_type_is_right_associative(const TokenType type)
 {
     assert(0 <= type && type < TokenType__count);
-    return type == TokenType_power;
+    return type == TokenType_Exponent;
 }
 
 static LexerState lexer_scan_text(Lexer* const lexer)
@@ -137,35 +136,35 @@ static LexerState lexer_scan_text(Lexer* const lexer)
 
         switch (c) {
         case '+':
-            type = TokenType_add;
+            type = TokenType_Plus;
             break;
 
         case '-':
-            type = TokenType_subtract;
+            type = TokenType_Minus;
             break;
 
         case '*':
-            type = TokenType_multiply;
+            type = TokenType_Multiply;
             break;
 
         case '/':
-            type = TokenType_divide;
+            type = TokenType_Divide;
             break;
 
         case '^':
-            type = TokenType_power;
+            type = TokenType_Exponent;
             break;
 
         case '(':
-            type = TokenType_left_paren;
+            type = TokenType_LeftParen;
             break;
 
         case ')':
-            type = TokenType_right_paren;
+            type = TokenType_RightParen;
             break;
 
         default:
-            type = TokenType_illegal;
+            type = TokenType_Illegal;
             break;
         }
 
@@ -174,7 +173,7 @@ static LexerState lexer_scan_text(Lexer* const lexer)
     else if (c == '\0')
         return NULL;
     else
-        lexer_emit(lexer, TokenType_illegal);
+        lexer_emit(lexer, TokenType_Illegal);
 
     return (LexerState)lexer_scan_text;
 }
@@ -193,7 +192,7 @@ static LexerState lexer_scan_number(Lexer* const lexer)
         lexer_backup(lexer);
     }
 
-    lexer_emit(lexer, TokenType_number);
+    lexer_emit(lexer, TokenType_Number);
 
     return (LexerState)lexer_scan_text;
 }
@@ -208,7 +207,7 @@ static LexerState lexer_scan_symbol(Lexer* const lexer)
         c = lexer_next(lexer);
 
     lexer_backup(lexer);
-    lexer_emit(lexer, TokenType_symbol);
+    lexer_emit(lexer, TokenType_Symbol);
 
     return (LexerState)lexer_scan_text;
 }

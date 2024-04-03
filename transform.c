@@ -36,23 +36,23 @@ double evaluate_expression(const Expression* const expression)
         BinaryExpression* const binary = (BinaryExpression*)expression;
 
         switch (binary->operator.type) {
-        case TokenType_add:
+        case TokenType_Plus:
             return evaluate_expression(binary->left) +
                    evaluate_expression(binary->right);
 
-        case TokenType_subtract:
+        case TokenType_Minus:
             return evaluate_expression(binary->left) -
                    evaluate_expression(binary->right);
 
-        case TokenType_multiply:
+        case TokenType_Multiply:
             return evaluate_expression(binary->left) *
                    evaluate_expression(binary->right);
 
-        case TokenType_divide:
+        case TokenType_Divide:
             return evaluate_expression(binary->left) /
                    evaluate_expression(binary->right);
 
-        case TokenType_power:
+        case TokenType_Exponent:
             return pow(evaluate_expression(binary->left),
                        evaluate_expression(binary->right));
         }

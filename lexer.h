@@ -8,24 +8,24 @@
 #include "list.h"
 
 typedef enum token_type {
-    TokenType_illegal,
+    TokenType_Illegal,
 
     TokenType__literals_begin,
-    TokenType_number,        // [0-9]+(\.[0-9]*)?
-    TokenType_symbol,        // [a-zA-Z][a-zA-Z0-9_]*
+    TokenType_Number,        // [0-9]+(\.[0-9]*)?
+    TokenType_Symbol,        // [a-zA-Z][a-zA-Z0-9_]*
     TokenType__literals_end,
 
     TokenType__operators_begin,
-    TokenType_add,           // +
-    TokenType_subtract,      // -
-    TokenType_multiply,      // *
-    TokenType_divide,        // /
-    TokenType_power,         // ^
-    TokenType_left_paren,    // (
-    TokenType_right_paren,   // )
+    TokenType_Plus,       // +
+    TokenType_Minus,      // -
+    TokenType_Multiply,   // *
+    TokenType_Divide,     // /
+    TokenType_Exponent,   // ^
+    TokenType_LeftParen,  // (
+    TokenType_RightParen, // )
     TokenType__operators_end,
 
-    TokenType__count,
+    TokenType__count = TokenType__operators_end,
 } TokenType;
 
 typedef struct token {

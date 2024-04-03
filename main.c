@@ -54,11 +54,12 @@ int main(int argc, char* argv[])
         if (strcmp(argv[argp], "-v") == 0) {
             verbose = true;
             ++argp;
-        } else if (strcmp(argv[argp], "-h") == 0) {
+        }
+        else if (strcmp(argv[argp], "-h") == 0)
             print_short_usage();
-        } else if (strcmp(argv[argp], "--help") == 0)  {
+        else if (strcmp(argv[argp], "--help") == 0)
             print_long_usage();
-        } else
+        else
             break;
     }
 
