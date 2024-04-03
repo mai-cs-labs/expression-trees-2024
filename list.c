@@ -12,8 +12,8 @@ void list_deinit(List* const list)
 {
     assert(list != NULL);
 
-    ListNodeBase* curr = list->head;
-    ListNodeBase* prev = NULL;
+    ListNode* curr = list->head;
+    ListNode* prev = NULL;
 
     while (curr) {
         prev = curr;
@@ -33,7 +33,7 @@ void* list__insert_front(List* const list, const size_t size)
     assert(list != NULL);
     assert(size > 0);
 
-    ListNodeBase* node = malloc(sizeof(ListNodeBase) + size);
+    ListNode* node = malloc(sizeof(ListNode) + size);
     if (node == NULL)
         return NULL;
 
@@ -48,7 +48,7 @@ void* list__insert_front(List* const list, const size_t size)
 
     list->head = node;
 
-    return (void*)((char*)node + sizeof(ListNodeBase));
+    return (void*)((char*)node + sizeof(ListNode));
 }
 
 void* list__insert_back(List* const list, const size_t size)
@@ -56,7 +56,7 @@ void* list__insert_back(List* const list, const size_t size)
     assert(list != NULL);
     assert(size > 0);
 
-    ListNodeBase* node = malloc(sizeof(ListNodeBase) + size);
+    ListNode* node = malloc(sizeof(ListNode) + size);
     if (node == NULL)
         return NULL;
 
@@ -71,18 +71,18 @@ void* list__insert_back(List* const list, const size_t size)
 
     list->tail = node;
 
-    return (void*)((char*)node + sizeof(ListNodeBase));
+    return (void*)((char*)node + sizeof(ListNode));
 }
 
-void* list__insert_after(List* const list, 
-                         ListNodeBase* const node,
+void* list__insert_after(List* const list,
+                         ListNode* const node,
                          const size_t size)
 {
     assert(list != NULL);
     assert(node != NULL);
     assert(size > 0);
 
-    ListNodeBase* next = malloc(sizeof(ListNodeBase) + size);
+    ListNode* next = malloc(sizeof(ListNode) + size);
     if (next == NULL)
         return NULL;
 
@@ -97,5 +97,5 @@ void* list__insert_after(List* const list,
 
     node->next = next;
 
-    return (void*)((char*)next + sizeof(ListNodeBase));
+    return (void*)((char*)next + sizeof(ListNode));
 }

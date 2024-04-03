@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <alloca.h>
+
 String string_init(const char* cstr)
 {
     assert(cstr != NULL);
@@ -54,6 +56,18 @@ String string_trim(const String* const string,
     const size_t length = end - begin;
 
     return (String){string->text + begin, length};
+}
+
+double string_to_double(const String* const string)
+{
+    assert(string != NULL);
+
+    char* const temp = alloca(string->length + 1);
+    temp[string->length] = '\0';
+
+    memcpy(temp, string->text, string->length);
+
+    return atof(temp);
 }
 
 void string_write(const String* const string, FILE* const file)

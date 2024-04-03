@@ -1,28 +1,46 @@
 #include "parser.h"
+#include "lexer.h"
+#include "string.h"
+#include "common.h"
 
 #include <assert.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-#define LOG(message) fputs((message), stderr)
-#define LOGF(format, ...) fprintf(stderr, (format), __VA_ARGS__)
-#define LOGC(ch) fputc((ch), stderr)
-
 typedef struct parser {
     List tokens;
+    // @TODO: Put syntax errors here
 } Parser;
 
-static Expression* parser_parse(Parser* const parser);
+static const size_t operator_precedence[TokenType__count] = {
+    [TokenType_add] = 1,
+    [TokenType_subtract] = 1,
+    [TokenType_multiply] = 2,
+    [TokenType_divide] = 2,
+    [TokenType_power] = 3,
+};
+
+static Expression* parser_parse_input(Parser* const parser);
+static Expression* parser_parse_expression(Parser* const parser,
+                                           const size_t precedence);
+static Expression* parser_parse_literal(Parser* const parser);
+static Expression* parser_parse_unary(Parser* const parser);
+static Expression* parser_parse_binary(Parser* const parser,
+                                       Expression* const lhs,
+                                       const size_t precedence);
+
+static Token* parser_next(Parser* const parser);
+static Token* parser_peek(Parser* const parser);
+static void parser_backup(Parser* const parser);
 
 static void expression_clear(Expression* const expression);
-static Expression* expression__create(const ExpressionType tag, const size_t size);
 static void expression__print(const Expression* const expression);
+static void expression__verbose_print(const Expression* const expression);
 
-static Literal* expression_literal_create(void);
-static UnaryExpression* expression_unary_create(void);
-static BinaryExpression* expression_binary_create(void);
+static Expression* create_empty_expression(void);
 
-Expression* expression_create(const List* const tokens)
+Expression* expression_parse(const List* const tokens)
 {
     assert(tokens != NULL);
 
@@ -30,7 +48,7 @@ Expression* expression_create(const List* const tokens)
         .tokens = *tokens,
     };
 
-    return parser_parse(&parser);
+    return parser_parse_input(&parser);
 }
 
 void expression_destroy(Expression** const expression)
@@ -47,10 +65,323 @@ void expression_print(const Expression* const expression)
     putc('\n', stdout);
 }
 
-static Expression* parser_parse(Parser* const parser)
+void expression_verbose_print(const Expression* const expression)
+{
+    assert(expression != NULL);
+    expression__verbose_print(expression);
+    putc('\n', stdout);
+}
+
+Literal* expression_literal_create_number(const double number)
+{
+    Literal* const result = malloc(sizeof(Literal));
+    if (result == NULL)
+        return NULL;
+
+    result->base.type = ExpressionType_Literal;
+    result->base.parenthesised = false;
+    result->tag = LiteralTag_Number;
+    result->number = number;
+
+    return result;
+}
+
+Literal* expression_literal_create_symbol(String* const symbol)
+{
+    assert(symbol != NULL);
+
+    Literal* const result = malloc(sizeof(Literal));
+    if (result == NULL)
+        return NULL;
+
+    result->base.type = ExpressionType_Literal;
+    result->base.parenthesised = false;
+    result->tag = LiteralTag_Symbol;
+    result->symbol = *symbol;
+
+    return result;
+}
+
+UnaryExpression* expression_unary_create(const Token operator,
+                                         Expression* const subexpression)
+{
+    assert(token_type_is_unary_operator(operator.type));
+    assert(!string_empty(&operator.content));
+    assert(subexpression != NULL);
+
+    UnaryExpression* const result = malloc(sizeof(UnaryExpression));
+    if (result == NULL)
+        return NULL;
+
+    result->base.type = ExpressionType_Unary;
+    result->base.parenthesised = false;
+    result->operator = operator;
+    result->subexpression = subexpression;
+
+    return result;
+}
+
+BinaryExpression* expression_binary_create(const Token operator,
+                                           Expression* const left,
+                                           Expression* const right)
+{
+    assert(token_type_is_binary_operator(operator.type));
+    assert(!string_empty(&operator.content));
+    assert(left != NULL);
+    assert(right != NULL);
+
+    BinaryExpression* const result = malloc(sizeof(BinaryExpression));
+    if (result == NULL)
+        return NULL;
+
+    result->base.type = ExpressionType_Binary;
+    result->base.parenthesised = false;
+    result->operator = operator;
+    result->left = left;
+    result->right = right;
+
+    return result;
+}
+
+bool expression_empty(const Expression* const expression)
+{
+    assert(expression != NULL);
+    return expression->type == ExpressionType_Empty;
+}
+
+static Expression* parser_parse_input(Parser* const parser)
 {
     assert(parser != NULL);
-    return expression__create(ExpressionType_Empty, sizeof(Expression));
+
+    Token* const current = parser_peek(parser);
+
+    if (current == NULL)
+        return create_empty_expression();
+
+    return parser_parse_expression(parser, 0);
+}
+
+static Expression* parser_parse_expression(Parser* const parser,
+                                           const size_t precedence)
+{
+    assert(parser != NULL);
+
+    Token* const current = parser_next(parser);
+
+    Expression* result;
+
+    if (current == NULL)
+        return create_empty_expression();
+    else if (token_type_is_literal(current->type)) {
+        parser_backup(parser);
+        result = parser_parse_literal(parser);
+    }
+    else if (token_type_is_unary_operator(current->type)) {
+        parser_backup(parser);
+        result = parser_parse_unary(parser);
+    }
+    else if (current->type == TokenType_left_paren) {
+        result = parser_parse_expression(parser, 0);
+
+        Token* const ahead = parser_next(parser);
+
+        if (ahead == NULL || (ahead != NULL && ahead->type != TokenType_right_paren)) {
+            LOG("Syntax error: mismatched \'");
+            string_debug_print(&current->content);
+            LOGF("\' found at position %lu\n", current->position);
+
+            if (result != NULL)
+                expression_clear(result);
+
+            return parser_parse_expression(parser, 0);
+        }
+
+        result->parenthesised = true;
+    }
+    else if (current->type == TokenType_right_paren) {
+        LOG("Syntax error: mismatched \'");
+        string_debug_print(&current->content);
+        LOGF("\' found at position %lu\n", current->position);
+        result = parser_parse_expression(parser, 0);
+    }
+    else {
+        LOG("Syntax error: expression expected, found \'");
+        string_debug_print(&current->content);
+        LOGF("\' at position %lu\n", current->position);
+        result = create_empty_expression();
+    }
+
+    Token* const ahead = parser_peek(parser);
+
+    if (ahead == NULL)
+        return result;
+
+    if (token_type_is_binary_operator(ahead->type)) {
+        for (;;) {
+            Expression* const binary = parser_parse_binary(parser, result, precedence);
+
+            if (binary == NULL) {
+                LOG("Syntax error: expression expected after binary opeartor \'");
+                string_debug_print(&ahead->content);
+                LOGF("\' at position %lu\n", ahead->position);
+                break;
+            }
+
+            if (binary == result)
+                break;
+
+            parser_backup(parser);
+            result = binary;
+        }
+    }
+    else if (ahead->type == TokenType_symbol) {
+        Expression* const rhs = parser_parse_literal(parser);
+
+        BinaryExpression* const binary = expression_binary_create(
+            (Token){TokenType_multiply, 0, String("*")}, result, rhs);
+
+        return (Expression*)binary;
+    }
+    else if (ahead->type == TokenType_left_paren) {
+        Expression* const rhs = parser_parse_expression(parser, 0);
+
+        BinaryExpression* const binary = expression_binary_create(
+            (Token){TokenType_multiply, 0, String("*")},
+            result,
+            (Expression*)rhs);
+
+        return (Expression*)binary;
+    }
+
+    return result;
+}
+
+static Expression* parser_parse_literal(Parser* const parser)
+{
+    assert(parser != NULL);
+
+    Token* const literal = parser_next(parser);
+    assert(token_type_is_literal(literal->type));
+
+    if (literal->type == TokenType_number) {
+        return (Expression*)expression_literal_create_number(
+            string_to_double(&literal->content));
+    }
+    else if (literal->type == TokenType_symbol)
+        return (Expression*)expression_literal_create_symbol(&literal->content);
+
+    // @NOTE: Never happens
+    return NULL;
+}
+
+static Expression* parser_parse_unary(Parser* const parser)
+{
+    assert(parser != NULL);
+
+    Token* const operator = parser_next(parser);
+    assert(operator != NULL && token_type_is_unary_operator(operator->type));
+
+    Token* const ahead = parser_peek(parser);
+
+    if (ahead == NULL) {
+        LOG("Syntax error: literal or parenthesised expression expected after unary \'");
+        string_debug_print(&operator->content);
+        LOGF("\' at position %lu\n", operator->position);
+        return create_empty_expression();
+    }
+
+    if (ahead->type == TokenType_number) {
+        parser_next(parser);
+
+        if (operator->type == TokenType_subtract) {
+            return (Expression*)expression_literal_create_number(
+                -string_to_double(&ahead->content));
+        }
+
+        return (Expression*)expression_literal_create_number(
+            string_to_double(&ahead->content));
+    }
+    else if (ahead->type == TokenType_symbol) {
+        parser_next(parser);
+
+        Expression* const literal = (Expression*)expression_literal_create_symbol(
+            &ahead->content);
+
+        if (operator->type == TokenType_subtract)
+            return (Expression*)expression_unary_create(*operator, literal);
+
+        return literal;
+    }
+    else if (ahead->type == TokenType_left_paren) {
+        return (Expression*)expression_unary_create(*operator,
+            parser_parse_expression(parser, 0));
+    }
+
+    LOG("Syntax error: literal or parenthesised expression expected after unary \'");
+    string_debug_print(&operator->content);
+    LOGF("\' at position %lu\n", operator->position);
+
+    return create_empty_expression();
+}
+
+static Expression* parser_parse_binary(Parser* const parser,
+                                       Expression* const lhs,
+                                       const size_t precedence)
+{
+    assert(parser != NULL);
+    assert(lhs != NULL);
+
+    Token* const operator = parser_next(parser);
+
+    if (operator == NULL || !token_type_is_binary_operator(operator->type))
+        return lhs;
+
+    const size_t lhs_precedence = operator_precedence[operator->type];
+    const size_t bias = token_type_is_right_associative(operator->type);
+
+    if (lhs_precedence + bias > precedence) {
+        Expression* const rhs = parser_parse_expression(parser, lhs_precedence);
+
+        if (rhs == NULL)
+            return NULL;
+
+        return (Expression*)expression_binary_create(*operator, lhs, rhs);
+    }
+
+    return lhs;
+}
+
+static Token* parser_next(Parser* const parser)
+{
+    assert(parser);
+
+    if (parser->tokens.head == NULL)
+        return NULL;
+
+    ListNode* node = parser->tokens.head;
+    parser->tokens.head = parser->tokens.head->next;
+
+    return list_node_data(node, Token);
+}
+
+static Token* parser_peek(Parser* const parser)
+{
+    assert(parser);
+
+    if (parser->tokens.head == NULL)
+        return NULL;
+
+    return list_node_data(parser->tokens.head, Token);
+}
+
+static void parser_backup(Parser* const parser)
+{
+    assert(parser);
+
+    if (parser->tokens.head != NULL)
+        parser->tokens.head = parser->tokens.head->prev;
+    else if (parser->tokens.tail != NULL)
+        parser->tokens.head = parser->tokens.tail;
 }
 
 static void expression_clear(Expression* const expression)
@@ -73,20 +404,6 @@ static void expression_clear(Expression* const expression)
     free(expression);
 }
 
-static Expression* expression__create(const ExpressionType type, const size_t size)
-{
-    assert(0 <= type && type < ExpressionType__count);
-    assert(size > 0);
-
-    Expression* const result = calloc(1, size);
-    if (result == NULL)
-        return NULL;
-
-    result->type = type;
-
-    return result;
-}
-
 static void expression__print(const Expression* const expression)
 {
     assert(expression != NULL);
@@ -106,7 +423,7 @@ static void expression__print(const Expression* const expression)
 
         switch (literal->tag) {
         case LiteralTag_Number:
-            fprintf(stdout, "%f", literal->number);
+            fprintf(stdout, "%.12g", literal->number);
             break;
 
         case LiteralTag_Symbol:
@@ -133,8 +450,8 @@ static void expression__print(const Expression* const expression)
             putc('(', stdout);
 
         expression__print(binary->left);
-
         putc(' ', stdout);
+
         string_print(&binary->operator.content);
         putc(' ', stdout);
 
@@ -146,20 +463,59 @@ static void expression__print(const Expression* const expression)
     }
 }
 
-static Literal* expression_literal_create(void)
+static void expression__verbose_print(const Expression* const expression)
 {
-    return (Literal*)expression__create(ExpressionType_Literal,
-                                        sizeof(Literal));
+    assert(expression != NULL);
+
+    switch (expression->type) {
+    case ExpressionType_Literal: {
+        const Literal* const literal = (Literal*)expression;
+
+        switch (literal->tag) {
+        case LiteralTag_Number:
+            fprintf(stdout, "%.12g", literal->number);
+            break;
+
+        case LiteralTag_Symbol:
+            string_print(&literal->symbol);
+            break;
+        }
+    } break;
+
+    case ExpressionType_Unary: {
+        const UnaryExpression* const unary = (UnaryExpression*)expression;
+        putc('{', stdout);
+        string_print(&unary->operator.content);
+        putc(' ', stdout);
+        expression__verbose_print(unary->subexpression);
+        putc('}', stdout);
+    } break;
+
+    case ExpressionType_Binary: {
+        const BinaryExpression* const binary = (BinaryExpression*)expression;
+
+        putc('{', stdout);
+        string_print(&binary->operator.content);
+        putc(' ', stdout);
+
+        expression__verbose_print(binary->left);
+        putc(' ', stdout);
+
+        expression__verbose_print(binary->right);
+        putc('}', stdout);
+    } break;
+    }
 }
 
-static UnaryExpression* expression_unary_create(void)
+static Expression* create_empty_expression(void)
 {
-    return (UnaryExpression*)expression__create(ExpressionType_Unary,
-                                                sizeof(UnaryExpression));
+    Expression* const result = malloc(sizeof(Expression));
+    if (result == NULL)
+        return NULL;
+
+    result->type = ExpressionType_Empty;
+    result->parenthesised = false;
+
+    return result;
 }
 
-static BinaryExpression* expression_binary_create(void)
-{
-    return (BinaryExpression*)expression__create(ExpressionType_Binary,
-                                                 sizeof(BinaryExpression));
-}

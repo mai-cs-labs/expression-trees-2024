@@ -2,29 +2,34 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <assert.h>
+#include <math.h>
+
+#include "common.h"
 #include "string.h"
 #include "list.h"
 #include "lexer.h"
 #include "parser.h"
+#include "transform.h"
 
 static bool verbose = false;
 static bool dry_run = false;
 
 static void print_short_usage(void)
 {
-    fputs("Usage: simplify [-h|--help] [-v] [-d] {expression}\n", stderr);
+    LOG("Usage: simplify [-h|--help] [-v] [-d] {expression}\n");
     exit(EXIT_SUCCESS);
 }
 
 static void print_long_usage(void)
 {
-    fputs("Usage: simplify [-h|--help] [-v] [-d] {expression}\n\n"
+    LOG("Usage: simplify [-h|--help] [-v] [-d] {expression}\n\n"
         "\t-h, --help\n"
         "\t\tOutput a usage message and exit\n\n"
         "\t-v\n"
         "\t\tEnable output of debug messages\n\n"
         "\t-d\n"
-        "\t\tDry run: do not parse expression, implies -v\n", stderr);
+        "\t\tDry run: do not parse expression, implies -v\n");
     exit(EXIT_SUCCESS);
 }
 
@@ -63,16 +68,24 @@ int main(int argc, char* argv[])
         goto error_scan;
     }
 
-    debug_print_tokens(&tokens);
+    if (verbose)
+        debug_print_tokens(&tokens);
 
-    Expression* expression = expression_create(&tokens);
+    Expression* expression = expression_parse(&tokens);
     if (expression == NULL) {
         result = EXIT_FAILURE;
         goto error_scan;
     }
 
-    expression_print(expression);
+    if (expression_empty(expression))
+        goto cleanup;
 
+    if (verbose)
+        expression_verbose_print(expression);
+    else
+        expression_print(expression);
+
+cleanup:
     expression_destroy(&expression);
 error_scan:
     list_deinit(&tokens);

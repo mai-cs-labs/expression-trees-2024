@@ -24,6 +24,8 @@ extern String string_trim(const String* const string,
                           const size_t begin,
                           const size_t end);
 
+extern double string_to_double(const String* const string);
+
 extern void string_write(const String* const string, FILE* const file);
 #define string_print(string_p) string_write((string_p), stdout)
 #define string_debug_print(string_p) string_write((string_p), stderr)
