@@ -4,11 +4,11 @@ CC ?= cc
 LD := $(CC)
 
 CFLAGS := -std=c99 -O0 -g -Wall -Wextra -Werror -Wno-switch
-LDFLAGS := -fsanitize=address,leak,undefined
+LDFLAGS := -lm -fsanitize=address,leak,undefined
 
 all: expr
 
-expr: string.o list.o lexer.o parser.o main.o
+expr: string.o list.o lexer.o parser.o transform.o main.o
 	$(LD) -o $@ $(LDFLAGS) $^
 
 .c.o:

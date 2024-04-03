@@ -1,9 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include <assert.h>
-#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "common.h"
 #include "string.h"
@@ -12,30 +10,41 @@
 #include "parser.h"
 #include "transform.h"
 
-static bool verbose = false;
-static bool dry_run = false;
-
 static void print_short_usage(void)
 {
-    LOG("Usage: simplify [-h|--help] [-v] [-d] {expression}\n");
+    LOG("Usage: expr [-h|--help] [-v] [<command>] {expression}\n");
     exit(EXIT_SUCCESS);
 }
 
 static void print_long_usage(void)
 {
-    LOG("Usage: simplify [-h|--help] [-v] [-d] {expression}\n\n"
+    LOG("Usage: expr [-h|--help] [-v] [<command>] {expression}\n\n"
         "\t-h, --help\n"
         "\t\tOutput a usage message and exit\n\n"
         "\t-v\n"
-        "\t\tEnable output of debug messages\n\n"
-        "\t-d\n"
-        "\t\tDry run: do not parse expression, implies -v\n");
+        "\t\tEnable verbose expression output\n\n"
+        "\tcommand, any of:\n"
+        "\t\tsimplify\tsimplify resulting expression (default)\n"
+        "\t\texpand\t\texpand resulting expression\n"
+        "\t\teval\t\tevaluate resulting expression\n\n");
     exit(EXIT_SUCCESS);
+}
+
+static void print_expression(const Expression* const expression, const bool verbose)
+{
+    assert(expression != NULL);
+
+    if (verbose)
+        expression_verbose_print(expression);
+    else
+        expression_print(expression);
 }
 
 int main(int argc, char* argv[])
 {
     int result = EXIT_SUCCESS;
+    bool verbose = false;
+    TransformMode transform = TransformMode_Simplify;
 
     if (argc == 1)
         print_short_usage();
@@ -45,16 +54,27 @@ int main(int argc, char* argv[])
         if (strcmp(argv[argp], "-v") == 0) {
             verbose = true;
             ++argp;
-        } else if (strcmp(argv[argp], "-d") == 0) {
-            dry_run = true;
-            verbose = true;
-            ++argp;
         } else if (strcmp(argv[argp], "-h") == 0) {
             print_short_usage();
         } else if (strcmp(argv[argp], "--help") == 0)  {
             print_long_usage();
         } else
             break;
+    }
+
+    if (argv[argp] == NULL)
+        print_short_usage();
+    else if (strcmp(argv[argp], "simplify") == 0) {
+        transform = TransformMode_Simplify;
+        ++argp;
+    }
+    else if (strcmp(argv[argp], "expand") == 0) {
+        transform = TransformMode_Expand;
+        ++argp;
+    }
+    else if (strcmp(argv[argp], "eval") == 0) {
+        transform = TransformMode_Evaluate;
+        ++argp;
     }
 
     if (argv[argp] == NULL)
@@ -80,10 +100,21 @@ int main(int argc, char* argv[])
     if (expression_empty(expression))
         goto cleanup;
 
-    if (verbose)
-        expression_verbose_print(expression);
-    else
-        expression_print(expression);
+    switch (transform) {
+    case TransformMode_Simplify:
+        simplify_expression(expression);
+        print_expression(expression, verbose);
+        break;
+
+    case TransformMode_Expand:
+        expand_expression(expression);
+        print_expression(expression, verbose);
+        break;
+
+    case TransformMode_Evaluate:
+        printf("%f\n", evaluate_expression(expression));
+        break;
+    }
 
 cleanup:
     expression_destroy(&expression);
