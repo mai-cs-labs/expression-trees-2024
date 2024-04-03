@@ -70,6 +70,18 @@ double string_to_double(const String* const string)
     return atof(temp);
 }
 
+bool string_equal(const String* const lhs,
+                  const String* const rhs)
+{
+    assert(lhs != NULL);
+    assert(rhs != NULL);
+
+    if (lhs->length != rhs->length)
+        return false;
+
+    return memcmp(lhs->text, rhs->text, lhs->length) == 0;
+}
+
 void string_write(const String* const string, FILE* const file)
 {
     assert(string != NULL);

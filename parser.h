@@ -55,6 +55,7 @@ extern void expression_destroy(Expression** const expression);
 extern void expression_print(const Expression* const expression);
 extern void expression_verbose_print(const Expression* const expression);
 
+// Expression creation functions
 extern Literal* expression_literal_create_number(const double number);
 extern Literal* expression_literal_create_symbol(String* const symbol);
 extern UnaryExpression* expression_unary_create(const Token operator,
@@ -63,6 +64,7 @@ extern BinaryExpression* expression_binary_create(const Token operator,
                                                   Expression* const left,
                                                   Expression* const right);
 
+// Checks whether expression is of type Empty, used in main function only
 extern bool expression_empty(const Expression* const expression);
 
 // Grammar:

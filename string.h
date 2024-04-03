@@ -26,6 +26,9 @@ extern String string_trim(const String* const string,
 
 extern double string_to_double(const String* const string);
 
+extern bool string_equal(const String* const lhs,
+                         const String* const rhs);
+
 extern void string_write(const String* const string, FILE* const file);
 #define string_print(string_p) string_write((string_p), stdout)
 #define string_debug_print(string_p) string_write((string_p), stderr)
