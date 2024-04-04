@@ -279,7 +279,7 @@ static bool fold_multipliers_to_diff_of_squares(Expression* const expression)
             return other_result;
         }
 
-        binary->operator = TokenType_Multiply;
+        binary->operator = TokenType_Minus;
 
         BinaryExpression* const new_lhs = expression_binary_create(
             TokenType_Exponent,
