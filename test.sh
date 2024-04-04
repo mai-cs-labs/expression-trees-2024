@@ -34,7 +34,7 @@ done; unset t
 rm ${tmpfile}
 
 if [ ${passed} -eq ${total} ]; then
-  printf "\n◉ All tests passed!\n"
+  printf "\n◉ All ${total} tests passed!\n"
   exit 0
 else
   printf "\n○ ${passed}/${total} tests passed\n"
