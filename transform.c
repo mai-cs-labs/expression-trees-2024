@@ -6,15 +6,15 @@
 
 #include "lexer.h"
 
-// @NOTE Put transformer functions prototypes here
+// @NOTE: Put transformer functions prototypes here
 static bool factor_difference_of_squares(Expression* const expression);
 static bool fold_multipliers_to_diff_of_squares(Expression* const expression);
 
-// Makes deep copy of a given expression.
+// Make deep copy of a given expression.
 static Expression* expression_copy(const Expression* const expression);
 
-// Compares two expressions, lhs and rhs.
-// Returns true, if two expressions are identical, otherwise - false.
+// Compare two expressions, lhs and rhs and return true if two
+// expressions are identical, otherwise - false.
 static bool expression_equal(const Expression* const lhs,
                              const Expression* const rhs);
 
@@ -86,15 +86,16 @@ double evaluate_expression(const Expression* const expression)
 // Expression transformers
 //
 
-// Transforms expression to factor differences of squares
+// Transform expression to factor differences of squares and return
+// true if if differences of squared were found, false - otherwise.
 //
 // Examples: a^2 - b^2 -> (a - b) * (a + b),
+//
 //           (a_0 - 50)^2 - eps^2 -> (a_0 - 50 - eps) * (a_0 - 50 + eps),
+//
 //           (a^2 - b^2)^2 - (c^2 - d^2)^2 ->
 //        -> ((a - b) * (a + b) - (c - d) * (c + d)) *
 //         * ((a - b) * (a + b) + (c - d) * (c + d))
-//
-// Returns true, if differences of squared were found, false - otherwise.
 //
 // The problem comes down to finding a subtree below, where A and B are
 // expressions as well..
@@ -102,7 +103,7 @@ double evaluate_expression(const Expression* const expression)
        -
       / \
      /   \
-    ^     ^
+    ^     ^    A^2 - A^B
    / \   / \
   A   2 B   2
 #endif
@@ -112,11 +113,11 @@ double evaluate_expression(const Expression* const expression)
        *
       / \
      /   \
-   (-)   (-)
+   (-)   (+)  (A - B) * (A + B)
    / \   / \
   A   B A   B
 #endif
-// @NOTE: If statements were not flattened for clarity
+// @NOTE: If statements were not flattened for relative clarity
 static bool factor_difference_of_squares(Expression* const expression)
 {
     assert(expression != NULL);
@@ -191,16 +192,16 @@ static bool factor_difference_of_squares(Expression* const expression)
                 a->parenthesised = false;
                 b->parenthesised = false;
 
-                // Create new (A + B) expression, notice the copy
+                // Create new (A - B) expression, notice the copy
                 BinaryExpression* new_lhs = expression_binary_create(
                     TokenType_Minus, expression_copy(a), expression_copy(b));
-                // A + B subexpression must be parenthesised
+                // A - B subexpression must be parenthesised
                 new_lhs->base.parenthesised = true;
 
-                // Create new (A - B) expression, notice the copy
+                // Create new (A + B) expression, notice the copy
                 BinaryExpression* new_rhs = expression_binary_create(
                     TokenType_Plus, expression_copy(a), expression_copy(b));
-                // A - B subexpression must be parenthesised
+                // A + B subexpression must be parenthesised
                 new_rhs->base.parenthesised = true;
 
                 // Destroy old expressions
@@ -224,13 +225,12 @@ static bool factor_difference_of_squares(Expression* const expression)
     return false;
 }
 
-// Transforms expression to fold multiplication of terms back to differences of squares
+// Transform expression to fold multiplication of terms back to differences of
+// squares and return true, if such subtree was found, false - otherwise.
 //
 // Examples: (a - b) * (a + b) -> a^2 - b^2,
 //           (a - ((c - d) * (c + d))) * (a + ((c - d) * (c + d))) ->
 //        -> a ^ 2 * (c ^ 2 * d ^ 2) ^ 2
-//
-// Returns true, if such subtree was found, false - otherwise.
 static bool fold_multipliers_to_diff_of_squares(Expression* const expression)
 {
     assert(expression != NULL);
