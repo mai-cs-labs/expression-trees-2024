@@ -6,13 +6,6 @@
 
 #include "lexer.h"
 
-// Operator constants to be used in synthesised binary and unary expressions
-static const Token ADD_OPERATOR = (Token){TokenType_Plus, 0, String("+")};
-static const Token SUBTRACT_OPERATOR = (Token){TokenType_Minus, 0, String("-")};
-static const Token MULTIPLY_OPERATOR = (Token){TokenType_Multiply, 0, String("*")};
-static const Token DIVIDE_OPERATOR = (Token){TokenType_Divide, 0, String("/")};
-static const Token EXPONENT_OPERATOR = (Token){TokenType_Exponent, 0, String("^")};
-
 // @NOTE Put transformer functions prototypes here
 static bool factor_difference_of_squares(Expression* const expression);
 static bool fold_multipliers_to_diff_of_squares(Expression* const expression);
@@ -61,7 +54,7 @@ double evaluate_expression(const Expression* const expression)
     case ExpressionType_Binary: {
         BinaryExpression* const binary = (BinaryExpression*)expression;
 
-        switch (binary->operator.type) {
+        switch (binary->operator) {
         case TokenType_Plus:
             return evaluate_expression(binary->left) +
                    evaluate_expression(binary->right);
@@ -143,7 +136,7 @@ static bool factor_difference_of_squares(Expression* const expression)
                                   factor_difference_of_squares(binary->right);
 
         // First step, find _difference_ of two expressions
-        if (binary->operator.type == TokenType_Minus) {
+        if (binary->operator == TokenType_Minus) {
             Expression* a = NULL;
             Expression* b = NULL;
             bool lhs_pow_of_two = false;
@@ -154,7 +147,7 @@ static bool factor_difference_of_squares(Expression* const expression)
                 BinaryExpression* const lhs = (BinaryExpression*)binary->left;
 
                 // and operator must be "raise to power of"
-                if (lhs->operator.type == TokenType_Exponent) {
+                if (lhs->operator == TokenType_Exponent) {
                     // exponent must be a literal
                     if (lhs->right->type == ExpressionType_Literal) {
                         Literal* const number = (Literal*)lhs->right;
@@ -175,7 +168,7 @@ static bool factor_difference_of_squares(Expression* const expression)
             if (binary->right->type == ExpressionType_Binary) {
                 BinaryExpression* const rhs = (BinaryExpression*)binary->right;
 
-                if (rhs->operator.type == TokenType_Exponent) {
+                if (rhs->operator == TokenType_Exponent) {
                     if (rhs->right->type == ExpressionType_Literal) {
                         Literal* const number = (Literal*)rhs->right;
                         if (number->tag == LiteralTag_Number) {
@@ -192,7 +185,7 @@ static bool factor_difference_of_squares(Expression* const expression)
             // are expressions "raise to power of two" respectively
             if (lhs_pow_of_two && rhs_pow_of_two) {
                 // Change operator from subtraction to multiplication
-                binary->operator = MULTIPLY_OPERATOR;
+                binary->operator = TokenType_Multiply;
 
                 // Remove parentheses from factors
                 a->parenthesised = false;
@@ -200,13 +193,13 @@ static bool factor_difference_of_squares(Expression* const expression)
 
                 // Create new (A + B) expression, notice the copy
                 BinaryExpression* new_lhs = expression_binary_create(
-                    SUBTRACT_OPERATOR, expression_copy(a), expression_copy(b));
+                    TokenType_Minus, expression_copy(a), expression_copy(b));
                 // A + B subexpression must be parenthesised
                 new_lhs->base.parenthesised = true;
 
                 // Create new (A - B) expression, notice the copy
                 BinaryExpression* new_rhs = expression_binary_create(
-                    ADD_OPERATOR, expression_copy(a), expression_copy(b));
+                    TokenType_Plus, expression_copy(a), expression_copy(b));
                 // A - B subexpression must be parenthesised
                 new_rhs->base.parenthesised = true;
 
@@ -258,7 +251,7 @@ static bool fold_multipliers_to_diff_of_squares(Expression* const expression)
         BinaryExpression* rhs = NULL;
 
         // Must be multiplication of factors
-        if (binary->operator.type != TokenType_Multiply)
+        if (binary->operator != TokenType_Multiply)
             return other_result;
 
         // Factors must be binary operations
@@ -271,8 +264,8 @@ static bool fold_multipliers_to_diff_of_squares(Expression* const expression)
         rhs = (BinaryExpression*)binary->right;
 
         // Left factor must be a difference, right factor must be a sum
-        if (lhs->operator.type != TokenType_Minus ||
-            rhs->operator.type != TokenType_Plus) {
+        if (lhs->operator != TokenType_Minus ||
+            rhs->operator != TokenType_Plus) {
             return other_result;
         }
 
@@ -286,16 +279,16 @@ static bool fold_multipliers_to_diff_of_squares(Expression* const expression)
             return other_result;
         }
 
-        binary->operator = MULTIPLY_OPERATOR;
+        binary->operator = TokenType_Multiply;
 
         BinaryExpression* const new_lhs = expression_binary_create(
-            EXPONENT_OPERATOR,
+            TokenType_Exponent,
             expression_copy(lhs->left),
             (Expression*)expression_literal_create_number(2)
         );
 
         BinaryExpression* const new_rhs = expression_binary_create(
-            EXPONENT_OPERATOR,
+            TokenType_Exponent,
             expression_copy(lhs->right),
             (Expression*)expression_literal_create_number(2)
         );
@@ -392,7 +385,7 @@ static bool expression_equal(const Expression* const lhs,
         UnaryExpression* const lhs_unary = (UnaryExpression*)lhs;
         UnaryExpression* const rhs_unary = (UnaryExpression*)rhs;
 
-        if (lhs_unary->operator.type != rhs_unary->operator.type)
+        if (lhs_unary->operator != rhs_unary->operator)
             return false;
 
         return expression_equal(lhs_unary->subexpression, rhs_unary->subexpression);
@@ -402,7 +395,7 @@ static bool expression_equal(const Expression* const lhs,
         BinaryExpression* const lhs_binary = (BinaryExpression*)lhs;
         BinaryExpression* const rhs_binary = (BinaryExpression*)rhs;
 
-        if (lhs_binary->operator.type != rhs_binary->operator.type)
+        if (lhs_binary->operator != rhs_binary->operator)
             return false;
 
         return expression_equal(lhs_binary->left, rhs_binary->left) &&

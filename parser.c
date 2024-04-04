@@ -13,12 +13,20 @@ typedef struct parser {
     // @TODO: Put syntax errors here
 } Parser;
 
-static const size_t operator_precedence[TokenType__count] = {
+static const size_t OPERATOR_PRECEDENCE[TokenType__count] = {
     [TokenType_Plus] = 1,
     [TokenType_Minus] = 1,
     [TokenType_Multiply] = 2,
     [TokenType_Divide] = 2,
     [TokenType_Exponent] = 3,
+};
+
+static const String OPERATOR_STRING[TokenType__count] = {
+    [TokenType_Plus] = String("+"),
+    [TokenType_Minus] = String("-"),
+    [TokenType_Multiply] = String("*"),
+    [TokenType_Divide] = String("/"),
+    [TokenType_Exponent] = String("^"),
 };
 
 static Expression* parser_parse_input(Parser* const parser);
@@ -102,11 +110,10 @@ Literal* expression_literal_create_symbol(String* const symbol)
     return result;
 }
 
-UnaryExpression* expression_unary_create(const Token operator,
+UnaryExpression* expression_unary_create(const TokenType operator,
                                          Expression* const subexpression)
 {
-    assert(token_type_is_unary_operator(operator.type));
-    assert(!string_empty(&operator.content));
+    assert(token_type_is_unary_operator(operator));
     assert(subexpression != NULL);
 
     UnaryExpression* const result = malloc(sizeof(UnaryExpression));
@@ -121,12 +128,11 @@ UnaryExpression* expression_unary_create(const Token operator,
     return result;
 }
 
-BinaryExpression* expression_binary_create(const Token operator,
+BinaryExpression* expression_binary_create(const TokenType operator,
                                            Expression* const left,
                                            Expression* const right)
 {
-    assert(token_type_is_binary_operator(operator.type));
-    assert(!string_empty(&operator.content));
+    assert(token_type_is_binary_operator(operator));
     assert(left != NULL);
     assert(right != NULL);
 
@@ -238,7 +244,7 @@ static Expression* parser_parse_expression(Parser* const parser,
         Expression* const rhs = parser_parse_literal(parser);
 
         BinaryExpression* const binary = expression_binary_create(
-            (Token){TokenType_Multiply, 0, String("*")}, result, rhs);
+            TokenType_Multiply, result, rhs);
 
         return (Expression*)binary;
     }
@@ -246,9 +252,7 @@ static Expression* parser_parse_expression(Parser* const parser,
         Expression* const rhs = parser_parse_expression(parser, 0);
 
         BinaryExpression* const binary = expression_binary_create(
-            (Token){TokenType_Multiply, 0, String("*")},
-            result,
-            (Expression*)rhs);
+            TokenType_Multiply, result, (Expression*)rhs);
 
         return (Expression*)binary;
     }
@@ -308,12 +312,12 @@ static Expression* parser_parse_unary(Parser* const parser)
             &ahead->content);
 
         if (operator->type == TokenType_Minus)
-            return (Expression*)expression_unary_create(*operator, literal);
+            return (Expression*)expression_unary_create(operator->type, literal);
 
         return literal;
     }
     else if (ahead->type == TokenType_LeftParen) {
-        return (Expression*)expression_unary_create(*operator,
+        return (Expression*)expression_unary_create(operator->type,
             parser_parse_expression(parser, 0));
     }
 
@@ -336,7 +340,7 @@ static Expression* parser_parse_binary(Parser* const parser,
     if (operator == NULL || !token_type_is_binary_operator(operator->type))
         return lhs;
 
-    const size_t lhs_precedence = operator_precedence[operator->type];
+    const size_t lhs_precedence = OPERATOR_PRECEDENCE[operator->type];
     const size_t bias = token_type_is_right_associative(operator->type);
 
     if (lhs_precedence + bias > precedence) {
@@ -345,7 +349,7 @@ static Expression* parser_parse_binary(Parser* const parser,
         if (rhs == NULL)
             return NULL;
 
-        return (Expression*)expression_binary_create(*operator, lhs, rhs);
+        return (Expression*)expression_binary_create(operator->type, lhs, rhs);
     }
 
     return lhs;
@@ -437,7 +441,7 @@ static void expression__print(const Expression* const expression)
 
     case ExpressionType_Unary: {
         const UnaryExpression* const unary = (UnaryExpression*)expression;
-        string_print(&unary->operator.content);
+        string_print(&OPERATOR_STRING[unary->operator]);
         expression__print(unary->subexpression);
     } break;
 
@@ -452,7 +456,7 @@ static void expression__print(const Expression* const expression)
         expression__print(binary->left);
         putc(' ', stdout);
 
-        string_print(&binary->operator.content);
+        string_print(&OPERATOR_STRING[binary->operator]);
         putc(' ', stdout);
 
         expression__print(binary->right);
@@ -485,7 +489,7 @@ static void expression__verbose_print(const Expression* const expression)
     case ExpressionType_Unary: {
         const UnaryExpression* const unary = (UnaryExpression*)expression;
         putc('{', stdout);
-        string_print(&unary->operator.content);
+        string_print(&OPERATOR_STRING[unary->operator]);
         putc(' ', stdout);
         expression__verbose_print(unary->subexpression);
         putc('}', stdout);
@@ -495,7 +499,7 @@ static void expression__verbose_print(const Expression* const expression)
         const BinaryExpression* const binary = (BinaryExpression*)expression;
 
         putc('{', stdout);
-        string_print(&binary->operator.content);
+        string_print(&OPERATOR_STRING[binary->operator]);
         putc(' ', stdout);
 
         expression__verbose_print(binary->left);

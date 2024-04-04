@@ -38,13 +38,13 @@ typedef struct expression_literal {
 
 typedef struct expression_unary {
     Expression base;
-    Token operator;
+    TokenType operator;
     Expression* subexpression;
 } UnaryExpression;
 
 typedef struct expression_binary {
     Expression base;
-    Token operator;
+    TokenType operator;
     Expression* left;
     Expression* right;
 } BinaryExpression;
@@ -58,9 +58,9 @@ extern void expression_verbose_print(const Expression* const expression);
 // Expression creation functions
 extern Literal* expression_literal_create_number(const double number);
 extern Literal* expression_literal_create_symbol(String* const symbol);
-extern UnaryExpression* expression_unary_create(const Token operator,
+extern UnaryExpression* expression_unary_create(const TokenType operator,
                                                 Expression* const subexpression);
-extern BinaryExpression* expression_binary_create(const Token operator,
+extern BinaryExpression* expression_binary_create(const TokenType operator,
                                                   Expression* const left,
                                                   Expression* const right);
 
