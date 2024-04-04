@@ -30,6 +30,38 @@ static void print_long_usage(void)
     exit(EXIT_SUCCESS);
 }
 
+static String read_stdin(void)
+{
+    uint8_t* data = malloc(128);
+    if (data == NULL)
+        return (String){NULL, 0};
+
+    size_t offset = 0;
+    size_t size;
+
+    for (;;) {
+        size = fread(data + offset, 1, 128, stdin);
+        if (size == (size_t)EOF)
+            break;
+
+        offset += size;
+        if (size == 128)
+            data = realloc(data, offset + size);
+        else
+            break;
+    }
+
+    if (offset > 0)
+        --offset;
+
+    if (offset == 0) {
+        free(data);
+        data = NULL;
+    }
+
+    return (String){data, offset};
+}
+
 static void print_expression(const Expression* const expression, const bool verbose)
 {
     assert(expression != NULL);
@@ -46,42 +78,49 @@ int main(int argc, char* argv[])
     bool verbose = false;
     TransformMode transform = TransformMode_Simplify;
 
-    if (argc == 1)
-        print_short_usage();
+    String input;
 
     int argp = 1;
-    while (argp != argc) {
-        if (strcmp(argv[argp], "-v") == 0) {
-            verbose = true;
-            ++argp;
-        }
-        else if (strcmp(argv[argp], "-h") == 0)
+    if (argc == 1) {
+        input = read_stdin();
+        if (string_empty(&input))
             print_short_usage();
-        else if (strcmp(argv[argp], "--help") == 0)
-            print_long_usage();
+    }
+    else {
+        while (argp != argc) {
+            if (strcmp(argv[argp], "-v") == 0) {
+                verbose = true;
+                ++argp;
+            }
+            else if (strcmp(argv[argp], "-h") == 0)
+                print_short_usage();
+            else if (strcmp(argv[argp], "--help") == 0)
+                print_long_usage();
+            else if (strcmp(argv[argp], "simplify") == 0) {
+                transform = TransformMode_Simplify;
+                ++argp;
+            }
+            else if (strcmp(argv[argp], "expand") == 0) {
+                transform = TransformMode_Expand;
+                ++argp;
+            }
+            else if (strcmp(argv[argp], "eval") == 0) {
+                transform = TransformMode_Evaluate;
+                ++argp;
+            }
+            else
+                break;
+        }
+
+        if (argv[argp] == NULL) {
+            input = read_stdin();
+            if (string_empty(&input))
+                print_short_usage();
+        }
         else
-            break;
+            input = string_init(argv[argp]);
     }
 
-    if (argv[argp] == NULL)
-        print_short_usage();
-    else if (strcmp(argv[argp], "simplify") == 0) {
-        transform = TransformMode_Simplify;
-        ++argp;
-    }
-    else if (strcmp(argv[argp], "expand") == 0) {
-        transform = TransformMode_Expand;
-        ++argp;
-    }
-    else if (strcmp(argv[argp], "eval") == 0) {
-        transform = TransformMode_Evaluate;
-        ++argp;
-    }
-
-    if (argv[argp] == NULL)
-        print_short_usage();
-
-    String input = string_init(argv[argp]);
     List tokens = lexical_scan(&input);
 
     if (check_illegal_tokens(&tokens)) {
@@ -113,7 +152,7 @@ int main(int argc, char* argv[])
         break;
 
     case TransformMode_Evaluate:
-        printf("%f\n", evaluate_expression(expression));
+        printf("%.12g\n", evaluate_expression(expression));
         break;
     }
 
@@ -121,6 +160,10 @@ cleanup:
     expression_destroy(&expression);
 error_scan:
     list_deinit(&tokens);
+
+    // @TODO: Sane way of checking allocated string
+    if (input.text != (uint8_t*)argv[argp])
+        free(input.text);
 
     return result;
 }
