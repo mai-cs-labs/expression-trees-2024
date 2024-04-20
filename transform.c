@@ -48,7 +48,11 @@ double evaluate_expression(const Expression* const expression)
 
 	case ExpressionType_Unary: {
 		UnaryExpression* const unary = (UnaryExpression*)expression;
-		return -evaluate_expression(unary->subexpression);
+
+		if (unary->operator == TokenType_Minus)
+			return -evaluate_expression(unary->subexpression);
+
+		return evaluate_expression(unary->subexpression);
 	} break;
 
 	case ExpressionType_Binary: {
