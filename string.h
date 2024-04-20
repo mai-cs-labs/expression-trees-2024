@@ -7,13 +7,14 @@
 #include <stdio.h>
 
 typedef struct string {
-    uint8_t* text;
-    size_t length;
+	uint8_t* text;
+	size_t length;
+	bool _allocated;
 } String;
 
 extern String string_init(const char* cstr);
 
-#define String(cstr) (String){(uint8_t*)(cstr), sizeof(cstr) - 1}
+#define String(cstr) (String){(uint8_t*)(cstr), sizeof(cstr) - 1, false}
 
 extern String string_create(const size_t length);
 extern void string_destroy(String* const string);

@@ -9,44 +9,44 @@
 #include "lexer.h"
 
 typedef enum expression_type {
-    ExpressionType_Empty,
-    ExpressionType_Literal,
-    ExpressionType_Unary,
-    ExpressionType_Binary,
-    ExpressionType__count,
+	ExpressionType_Empty,
+	ExpressionType_Literal,
+	ExpressionType_Unary,
+	ExpressionType_Binary,
+	ExpressionType__count,
 } ExpressionType;
 
 typedef enum literal_tag {
-    LiteralTag_Number,
-    LiteralTag_Symbol,
-    LiteralTag__count,
+	LiteralTag_Number,
+	LiteralTag_Symbol,
+	LiteralTag__count,
 } LiteralTag;
 
 typedef struct expression {
-    ExpressionType type;
-    bool parenthesised;
+	ExpressionType type;
+	bool parenthesised;
 } Expression;
 
 typedef struct expression_literal {
-    Expression base;
-    LiteralTag tag;
-    union {
-        double number;
-        String symbol;
-    };
+	Expression base;
+	LiteralTag tag;
+	union {
+		double number;
+		String symbol;
+	};
 } Literal;
 
 typedef struct expression_unary {
-    Expression base;
-    TokenType operator;
-    Expression* subexpression;
+	Expression base;
+	TokenType operator;
+	Expression* subexpression;
 } UnaryExpression;
 
 typedef struct expression_binary {
-    Expression base;
-    TokenType operator;
-    Expression* left;
-    Expression* right;
+	Expression base;
+	TokenType operator;
+	Expression* left;
+	Expression* right;
 } BinaryExpression;
 
 // Build expression tree from tokens

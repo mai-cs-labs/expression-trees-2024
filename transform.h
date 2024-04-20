@@ -4,9 +4,9 @@
 #include "parser.h"
 
 typedef enum transform_mode {
-    TransformMode_Simplify,
-    TransformMode_Expand,
-    TransformMode_Evaluate,
+	TransformMode_Simplify,
+	TransformMode_Expand,
+	TransformMode_Evaluate,
 } TransformMode;
 
 extern void simplify_expression(Expression* const expression);
