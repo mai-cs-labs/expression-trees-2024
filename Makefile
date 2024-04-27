@@ -4,7 +4,7 @@ CC ?= cc
 LD := $(CC)
 
 CFLAGS := -std=c99 -O0 -g -Wall -Wextra -Werror -Wno-switch -Wno-unused-const-variable
-LDFLAGS := -lm -fsanitize=address,leak,undefined
+LDFLAGS := -lm
 
 all: expr
 

@@ -33,6 +33,7 @@ void expand_expression(Expression* const expression)
 
 	// @NOTE: Put expander transformer functions here
 	factor_difference_of_squares(expression);
+	multiply_numerator_and_denominator(expression);
 }
 
 double evaluate_expression(const Expression* const expression)
@@ -77,8 +78,8 @@ double evaluate_expression(const Expression* const expression)
 			       evaluate_expression(binary->right);
 
 		case TokenType_Exponent:
-			return pow(evaluate_expression(binary->left),
-			           evaluate_expression(binary->right));
+			return 0; //pow(evaluate_expression(binary->left),
+			           //evaluate_expression(binary->right));
 		}
 	} break;
 	}
@@ -93,7 +94,7 @@ double evaluate_expression(const Expression* const expression)
 
 
 // (a/b) * (c/d) => (a * c) / (b * d).
-static bool multiply_numerator_and_denominator(Expression) {
+static bool multiply_numerator_and_denominator(Expression* const expression) {
     assert(expression != NULL);
 
     switch (expression->type) {
@@ -105,8 +106,7 @@ static bool multiply_numerator_and_denominator(Expression) {
     case ExpressionType_Binary: {
         BinaryExpression* const binary = (BinaryExpression*)expression;
 
-        const bool other_result = multiply_numerator_and_denominator(binary->left) ||
-            multiply_numerator_and_denominator(binary->right);
+        bool other_result = multiply_numerator_and_denominator(binary->left) | multiply_numerator_and_denominator(binary->right);
 
         if (binary->operator == TokenType_Multiply) {
             Expression* a = NULL;
@@ -115,8 +115,7 @@ static bool multiply_numerator_and_denominator(Expression) {
             Expression* d = NULL;
             bool lhs_is_fraction = false;
             bool rhs_is_fraction = false;
-
-
+            
             if (binary->left->type == ExpressionType_Binary) {
                 BinaryExpression* const lhs = (BinaryExpression*)binary->left;
                 if (lhs->operator == TokenType_Divide) {
@@ -130,18 +129,14 @@ static bool multiply_numerator_and_denominator(Expression) {
                 BinaryExpression* const rhs = (BinaryExpression*)binary->right;
                 if (rhs->operator == TokenType_Divide) {
                     rhs_is_fraction = true;
-                    c = lhs->left;
-                    d = lhs->right;
+                    c = rhs->left;
+                    d = rhs->right;
                 }
             }
-
-            if (lhs_pow_of_two && rhs_pow_of_two) {
+            
+            	
+            if (lhs_is_fraction && rhs_is_fraction) {
                 binary->operator = TokenType_Divide;
-
-                a->parenthesised = false;
-                b->parenthesised = false;
-                c->parenthesised = false;
-                d->parenthesised = false;
 
                 BinaryExpression* new_lhs = expression_binary_create(
                     TokenType_Multiply, expression_copy(a), expression_copy(c));
@@ -157,8 +152,9 @@ static bool multiply_numerator_and_denominator(Expression) {
                 binary->left = (Expression*)new_lhs;
                 binary->right = (Expression*)new_rhs;
 
-                return true;
-            }
+		other_result = other_result | multiply_numerator_and_denominator(binary->left) | multiply_numerator_and_denominator(binary->right);
+                return other_result;
+            }  
         }
 
         return other_result;
@@ -168,7 +164,6 @@ static bool multiply_numerator_and_denominator(Expression) {
     // Not found
     return false;
 }
-
 
 // Transform expression to factor differences of squares and return
 // true if if differences of squared were found, false - otherwise.
