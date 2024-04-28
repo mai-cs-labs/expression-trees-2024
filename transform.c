@@ -78,8 +78,8 @@ double evaluate_expression(const Expression* const expression)
 			       evaluate_expression(binary->right);
 
 		case TokenType_Exponent:
-			return 0; //pow(evaluate_expression(binary->left),
-			           //evaluate_expression(binary->right));
+			return pow(evaluate_expression(binary->left),
+			           evaluate_expression(binary->right));
 		}
 	} break;
 	}
