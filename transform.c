@@ -9,6 +9,7 @@
 // @NOTE: Put transformer functions prototypes here
 static bool factor_difference_of_squares(Expression* const expression);
 static bool fold_multipliers_to_diff_of_squares(Expression* const expression);
+static bool multiplying_powers_with_the_same_bases(Expression* const expression);
 
 // Make deep copy of a given expression.
 static Expression* expression_copy(const Expression* const expression);
@@ -23,6 +24,7 @@ void simplify_expression(Expression* const expression)
 	assert(expression != NULL);
 
 	// @NOTE: Put simplification transformer functions here
+	multiplying_powers_with_the_same_bases(expression);
 	fold_multipliers_to_diff_of_squares(expression);
 }
 
@@ -306,6 +308,74 @@ static bool fold_multipliers_to_diff_of_squares(Expression* const expression)
 		return true;
 	} break;
 	}
+
+	return false;
+}
+
+// variant 17
+// Перемножить степени с одинаковыми основаниями:
+// a^2 * a^k -> a^(2 + k)
+
+static bool multiplying_powers_with_the_same_bases(Expression* const expression)
+{
+	assert(expression != NULL);
+
+	switch(expression->type) {
+		case ExpressionType_Unary: {
+			UnaryExpression* const unary = (UnaryExpression*)expression;
+			return multiplying_powers_with_the_same_bases(unary->subexpression);
+		} break;
+
+		case ExpressionType_Binary: {
+			BinaryExpression* const binary = (BinaryExpression*)expression; 
+
+			bool other_result = multiplying_powers_with_the_same_bases(binary->left) | 
+									  multiplying_powers_with_the_same_bases(binary->right);
+			
+			BinaryExpression* lhs = NULL;
+			BinaryExpression* rhs = NULL;
+
+			if(binary->operator != TokenType_Multiply) {
+				return other_result;
+			}
+
+			if(binary->left->type != ExpressionType_Binary || binary->right->type != ExpressionType_Binary) {
+				return other_result;
+			}
+
+			lhs = (BinaryExpression*)binary->left;
+			rhs = (BinaryExpression*)binary->right;
+
+			if(lhs->operator != TokenType_Exponent || rhs->operator != TokenType_Exponent) {
+				return other_result;
+			}
+
+			if(!lhs->base.parenthesised || !rhs->base.parenthesised) {
+				return other_result;
+			}
+
+			if(!expression_equal(lhs->left, rhs->left)) {
+				return other_result;
+			}
+
+			binary->operator = TokenType_Exponent;
+
+			BinaryExpression* const new_lhs = expression_copy(lhs->left);
+
+			BinaryExpression* const new_rhs = expression_binary_create(TokenType_Plus, expression_copy(lhs->right), expression_copy(rhs->right));
+
+			expression_destroy((Expression**)&lhs);
+			expression_destroy((Expression**)&rhs);
+
+			binary->left = (Expression*)new_lhs;
+			binary->right = (Expression*)new_rhs;
+
+
+			other_result = other_result | multiplying_powers_with_the_same_bases(binary->left)
+										| multiplying_powers_with_the_same_bases(binary->right);
+			return other_result;
+		} break;
+		}
 
 	return false;
 }
