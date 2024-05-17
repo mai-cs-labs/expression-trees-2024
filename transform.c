@@ -9,6 +9,7 @@
 // @NOTE: Put transformer functions prototypes here
 static bool factor_difference_of_squares(Expression* const expression);
 static bool fold_multipliers_to_diff_of_squares(Expression* const expression);
+static bool reduce_multiplying_to_summ(Expression* const expression);
 
 // Make deep copy of a given expression.
 static Expression* expression_copy(const Expression* const expression);
@@ -24,6 +25,7 @@ void simplify_expression(Expression* const expression)
 
 	// @NOTE: Put simplification transformer functions here
 	fold_multipliers_to_diff_of_squares(expression);
+	reduce_multiplying_to_summ(expression);
 }
 
 void expand_expression(Expression* const expression)
@@ -308,6 +310,69 @@ static bool fold_multipliers_to_diff_of_squares(Expression* const expression)
 	}
 
 	return false;
+}
+
+// Reduce expression by replacing the operation of multiplying a variable by an integer by the sum of terms
+// example: a * 3 = a + a + a
+
+static bool reduce_multiplying_to_summ(Expression* const expression) {
+    assert(expression != NULL);
+
+    switch (expression->type) {
+        case ExpressionType_Unary: {
+            UnaryExpression* const unary = (UnaryExpression*)expression;
+            return reduce_multiplying_to_summ(unary->subexpression);
+        } break;
+
+        case ExpressionType_Binary: {
+            BinaryExpression* const binary = (BinaryExpression*)expression;
+
+			const bool other_result = reduce_multiplying_to_summ(binary->left) |
+		    						  reduce_multiplying_to_summ(binary->right);
+            
+            Literal* number = NULL;
+            Expression* expr = NULL;
+
+            if (binary->operator != TokenType_Multiply) {
+                return other_result;
+            }
+
+            if ((binary->left->type == ExpressionType_Literal && ((Literal*)binary->left)->tag == LiteralTag_Number)) {
+                number = (Literal*)binary->left;
+                expr = binary->right;
+            } 
+
+			else if ((binary->right->type == ExpressionType_Literal && ((Literal*)binary->right)->tag == LiteralTag_Number)) {
+                number = (Literal*)binary->right;
+                expr = binary->left;
+            }
+
+			else {
+                return other_result;
+            }
+
+            int32_t n = number->number;
+
+            if (n > 1) {
+                Expression* sum = expression_copy(expr);
+				Expression* last_term = expression_copy(expr);
+
+                for (int32_t i = 1; i < n - 1; i++) {
+                    BinaryExpression* addition = expression_binary_create(TokenType_Plus, sum, expression_copy(expr));
+                    sum = (Expression*)addition;
+                }
+
+                expression_destroy(&binary->left);
+				expression_destroy(&binary->right);
+                binary->operator = TokenType_Plus;
+                binary->left = sum;
+				binary->right = last_term;
+            } 
+            return true;
+        } 
+		break;
+    }
+    return false;
 }
 
 //
