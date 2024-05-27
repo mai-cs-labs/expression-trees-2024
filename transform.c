@@ -9,6 +9,7 @@
 // @NOTE: Put transformer functions prototypes here
 static bool factor_difference_of_squares(Expression* const expression);
 static bool fold_multipliers_to_diff_of_squares(Expression* const expression);
+static bool multiply_numerator_and_denominator(Expression* const expression);
 
 // Make deep copy of a given expression.
 static Expression* expression_copy(const Expression* const expression);
@@ -32,6 +33,7 @@ void expand_expression(Expression* const expression)
 
 	// @NOTE: Put expander transformer functions here
 	factor_difference_of_squares(expression);
+	multiply_numerator_and_denominator(expression);
 }
 
 double evaluate_expression(const Expression* const expression)
@@ -89,6 +91,79 @@ double evaluate_expression(const Expression* const expression)
 //
 // Expression transformers
 //
+
+
+// (a/b) * (c/d) => (a * c) / (b * d).
+static bool multiply_numerator_and_denominator(Expression* const expression) {
+    assert(expression != NULL);
+
+    switch (expression->type) {
+    case ExpressionType_Unary: {
+        UnaryExpression* const unary = (UnaryExpression*)expression;
+        return multiply_numerator_and_denominator(unary->subexpression);
+    } break;
+
+    case ExpressionType_Binary: {
+        BinaryExpression* const binary = (BinaryExpression*)expression;
+
+        bool other_result = multiply_numerator_and_denominator(binary->left) | multiply_numerator_and_denominator(binary->right);
+
+        if (binary->operator == TokenType_Multiply) {
+            Expression* a = NULL;
+            Expression* b = NULL;
+            Expression* c = NULL;
+            Expression* d = NULL;
+            bool lhs_is_fraction = false;
+            bool rhs_is_fraction = false;
+            
+            if (binary->left->type == ExpressionType_Binary) {
+                BinaryExpression* const lhs = (BinaryExpression*)binary->left;
+                if (lhs->operator == TokenType_Divide) {
+                    lhs_is_fraction = true;
+                    a = lhs->left;
+                    b = lhs->right;
+                }
+            }
+
+            if (binary->right->type == ExpressionType_Binary) {
+                BinaryExpression* const rhs = (BinaryExpression*)binary->right;
+                if (rhs->operator == TokenType_Divide) {
+                    rhs_is_fraction = true;
+                    c = rhs->left;
+                    d = rhs->right;
+                }
+            }
+            
+            	
+            if (lhs_is_fraction && rhs_is_fraction) {
+                binary->operator = TokenType_Divide;
+
+                BinaryExpression* new_lhs = expression_binary_create(
+                    TokenType_Multiply, expression_copy(a), expression_copy(c));
+                new_lhs->base.parenthesised = true;
+
+                BinaryExpression* new_rhs = expression_binary_create(
+                    TokenType_Multiply, expression_copy(b), expression_copy(d));
+                new_rhs->base.parenthesised = true;
+
+                expression_destroy(&binary->left);
+                expression_destroy(&binary->right);
+
+                binary->left = (Expression*)new_lhs;
+                binary->right = (Expression*)new_rhs;
+
+		other_result = other_result | multiply_numerator_and_denominator(binary->left) | multiply_numerator_and_denominator(binary->right);
+                return other_result;
+            }  
+        }
+
+        return other_result;
+    } break;
+    }
+
+    // Not found
+    return false;
+}
 
 // Transform expression to factor differences of squares and return
 // true if if differences of squared were found, false - otherwise.
@@ -409,4 +484,3 @@ static bool expression_equal(const Expression* const lhs,
 
 	return false;
 }
-
