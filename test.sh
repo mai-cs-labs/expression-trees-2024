@@ -8,7 +8,7 @@ passed=0
 make -j
 
 for t in $(find . -type f -iname '*-test'); do
-	total=$((++total))
+	total=$(($total+1))
 	name="${t##./tests/}"
 	answer="${t%%-test}-answer"
 
@@ -30,7 +30,7 @@ for t in $(find . -type f -iname '*-test'); do
 		echo "${name} failed:"
 		printf "Expected:\n\t%s\nFound:\n\t%s\n\n" "$(cat ${answer})" "$(cat ${tmpfile})"
 	else
-		passed=$((++passed))
+		passed=$(($passed+1))
 	fi
 done; unset t
 

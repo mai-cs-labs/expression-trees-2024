@@ -10,7 +10,7 @@
 // @NOTE: Put transformer functions prototypes here
 static bool factor_difference_of_squares(Expression *const expression);
 static bool fold_multipliers_to_diff_of_squares(Expression *const expression);
-static bool order_adjacent_operands(Expression *const expression);
+static bool reduce_expression(Expression *const expression);
 
 // Make deep copy of a given expression.
 static Expression *expression_copy(const Expression *const expression);
@@ -25,7 +25,7 @@ void simplify_expression(Expression *const expression)
 	assert(expression != NULL);
 
 	// @NOTE: Put simplification transformer functions here
-	order_adjacent_operands(expression);
+	reduce_expression(expression);
 	fold_multipliers_to_diff_of_squares(expression);
 }
 
@@ -96,29 +96,7 @@ double evaluate_expression(const Expression *const expression)
 	// @NOTE: ExpressionType_Empty and LiteralTag_Symbol case
 	return 0;
 }
-static bool expression_lexicographic_compare(const Expression *const exp1, const Expression *const exp2)
-{
-	// Проверяем, что указатели не NULL
-	// if (exp1 == NULL || exp2 == NULL)
-	// {
-	// 	return false; // Можно также вернуть -1 или 1, в зависимости от требований
-	// }
-
-	// Преобразуем указатели в строки для сравнения
-	Literal *const lhs_literal = (Literal *)exp1;
-	Literal *const rhs_literal = (Literal *)exp2;
-
-	// Сравниваем строки лексикографически
-	if (strcmp((char *)&lhs_literal->symbol, (char *)&rhs_literal->symbol) < 0)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
-static bool order_adjacent_operands(Expression *const expression)
+static bool reduce_expression(Expression *const expression)
 {
 	// выражение не нулевое
 	assert(expression != NULL);
@@ -130,7 +108,8 @@ static bool order_adjacent_operands(Expression *const expression)
 	case ExpressionType_Unary:
 	{
 		UnaryExpression *const unary = (UnaryExpression *)expression;
-		changed |= order_adjacent_operands(unary->subexpression);
+		changed |= reduce_expression(unary->subexpression);
+		// return reduce_expression(unary->subexpression);
 	}
 	break;
 		// если бинарное
@@ -138,48 +117,72 @@ static bool order_adjacent_operands(Expression *const expression)
 	{
 		// создаем указатель
 		BinaryExpression *const binary = (BinaryExpression *)expression;
-		const bool other_result = order_adjacent_operands(binary->left) |
-								  order_adjacent_operands(binary->right);
+		const bool other_result = reduce_expression(binary->left) |
+								  reduce_expression(binary->right);
 
-		// проверка сложение или умножение
-		if (binary->operator== TokenType_Plus || binary->operator== TokenType_Multiply)
+		// проверка возведение в степень
+		if (binary->operator== TokenType_Exponent)
 		{
 			// является ли левый и правый операнды бинарным выражением
 			if (binary->left->type == ExpressionType_Binary)
 			{
-				changed |= order_adjacent_operands(binary->left);
+				changed |= reduce_expression(binary->left);
 			}
 			if (binary->right->type == ExpressionType_Binary)
 			{
-				changed |= order_adjacent_operands(binary->right);
+				changed |= reduce_expression(binary->right);
 			}
-			// если да, то вызов рекурсивных функций
-			Literal *const lhs_literal = (Literal *)binary->left;
-			Literal *const rhs_literal = (Literal *)binary->right;
-			// Literal *const number = (Literal *)rhs->right;
-			if ((lhs_literal->tag == LiteralTag_Symbol) && (rhs_literal->tag == LiteralTag_Symbol))
+			if (binary->left->type == ExpressionType_Literal &&
+				binary->right->type == ExpressionType_Literal)
 			{
-				if (expression_lexicographic_compare(binary->left, binary->right) == false)
+
+				Literal *const lhs_literal = (Literal *)binary->left;
+				Literal *const rhs_literal = (Literal *)binary->right;
+				if ((lhs_literal->tag == LiteralTag_Symbol) && (rhs_literal->tag == LiteralTag_Number))
 				{
-					Expression *temp = binary->left;
-					binary->left = binary->right;
-					binary->right = temp;
-					changed = true;
-					printf("change");
+					if (rhs_literal->number > 1)
+					{
+						rhs_literal->number--;
+						BinaryExpression *const new_rhs = expression_binary_create(
+							TokenType_Exponent,
+							expression_copy(binary->left),
+							(Expression *)expression_literal_create_number(rhs_literal->number));
+
+						expression_destroy((Expression **)&rhs_literal);
+						binary->right = (Expression *)new_rhs;
+						binary->operator= TokenType_Multiply;
+						changed = true;
+					}
 				}
 			}
-			return true;
-			// проверка лексикографического порядка
-		}
-		else
-		{
-			return other_result;
 		}
 	}
 	break;
 	}
-	return false;
+	return changed;
 }
+
+/* a ^ 3 -> a * a * a
+1st step
+	^
+   / \
+  a   3
+
+2nd step
+	*
+   / \
+  a   ^
+	 / \
+	a   2
+
+3rd step
+	*
+   / \
+  a   *
+	 / \
+	a   a
+
+*/
 
 //
 // Expression transformers
