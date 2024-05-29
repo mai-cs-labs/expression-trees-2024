@@ -9,6 +9,7 @@
 // @NOTE: Put transformer functions prototypes here
 static bool factor_difference_of_squares(Expression* const expression);
 static bool fold_multipliers_to_diff_of_squares(Expression* const expression);
+static bool fold_multipliers(Expression* const expression);
 
 // Make deep copy of a given expression.
 static Expression* expression_copy(const Expression* const expression);
@@ -24,6 +25,7 @@ void simplify_expression(Expression* const expression)
 
 	// @NOTE: Put simplification transformer functions here
 	fold_multipliers_to_diff_of_squares(expression);
+	fold_multipliers(expression);
 }
 
 void expand_expression(Expression* const expression)
@@ -89,6 +91,14 @@ double evaluate_expression(const Expression* const expression)
 //
 // Expression transformers
 //
+bool fold_multipliers(Expression* const expression){
+
+
+
+
+
+
+
 
 // Transform expression to factor differences of squares and return
 // true if if differences of squared were found, false - otherwise.
